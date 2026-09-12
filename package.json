@@ -1,0 +1,25 @@
+{
+  "name": "sepolia-trace",
+  "version": "1.0.0",
+  "description": "Transaction trace system for Ethereum Sepolia: ingest ETH + ERC-20 transfers, trace upstream/downstream, count hops.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "ingest": "node --env-file-if-exists=.env --import tsx src/cli.ts ingest",
+    "find-seeds": "node --env-file-if-exists=.env --import tsx src/cli.ts find-seeds",
+    "verify": "node --env-file-if-exists=.env --import tsx src/cli.ts verify",
+    "dev": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "start": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

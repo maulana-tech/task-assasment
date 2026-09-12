@@ -1,0 +1,20 @@
+{
+  "from": "0x08ead670c7b652707010e400768a7303a7b3d8de",
+  "to": "0xa396a53d1f6071defabeaa077693c58551a706fb",
+  "window": [11672000, 11673999],
+  "hops": 4,
+  "path": [
+    "0x08ead670c7b652707010e400768a7303a7b3d8de",
+    "0x491f9fddf77656946ed01a3aa17a3019ce3aa487",
+    "0xcecca65f14198031cb58dc4c7483052781445af7",
+    "0xb1a3aeec8f8daf914b78206d8ccd95c62bf2801d",
+    "0xa396a53d1f6071defabeaa077693c58551a706fb"
+  ],
+  "edges": [
+    {"txHash": "0x8ccef51b8e71a1654ec70f0bbf611b9cca05c24b10775d77bfeb9a1c672ee8c4", "blockNumber": 11672000, "txIndex": 92, "logIndex": -1, "from": "0x08ead670c7b652707010e400768a7303a7b3d8de", "to": "0x491f9fddf77656946ed01a3aa17a3019ce3aa487", "asset": "ETH", "amount": "100000000000000000"},
+    {"txHash": "0x1b086a003504d5f8d354d9e2e8780c82f800e0e963ff007516db569d44c086f3", "blockNumber": 11672077, "txIndex": 56, "logIndex": 119, "from": "0x491f9fddf77656946ed01a3aa17a3019ce3aa487", "to": "0xcecca65f14198031cb58dc4c7483052781445af7", "asset": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238", "amount": "1100000"},
+    {"txHash": "0x326a2c7460c4bec9f6cbd9ea87e6767673f8084d7919815c5b221331c12d2b48", "blockNumber": 11672410, "txIndex": 55, "logIndex": 40, "from": "0xcecca65f14198031cb58dc4c7483052781445af7", "to": "0xb1a3aeec8f8daf914b78206d8ccd95c62bf2801d", "asset": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238", "amount": "1000000"},
+    {"txHash": "0x5109def5c8b3fac0754f55e63efa7f76872f8e53e3369313a479e25998709539", "blockNumber": 11673511, "txIndex": 93, "logIndex": 305, "from": "0xb1a3aeec8f8daf914b78206d8ccd95c62bf2801d", "to": "0xa396a53d1f6071defabeaa077693c58551a706fb", "asset": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238", "amount": "2000000"}
+  ],
+  "truncated": false
+}

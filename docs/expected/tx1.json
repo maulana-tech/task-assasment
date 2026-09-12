@@ -1,0 +1,101 @@
+{
+  "seed": {
+    "type": "tx",
+    "value": "0x4c97c1e24c03bd19fcbb9c4eb2fcadf476caf5730e8621cd18183a0b333550d9"
+  },
+  "window": [
+    11672000,
+    11673999
+  ],
+  "nodes": [
+    {
+      "address": "0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1",
+      "hop": 0,
+      "isContract": false
+    },
+    {
+      "address": "0xb5caaba79498946cfac630fca2b5f0f352e17674",
+      "hop": 0,
+      "isContract": false
+    },
+    {
+      "address": "0xb5f5fd2be8521223b72c75951ce34e520360bf3a",
+      "hop": 1,
+      "isContract": false
+    },
+    {
+      "address": "0x467c1a8b3f6bc7e80773d4c047adcfa8385818cf",
+      "hop": 2,
+      "isContract": true
+    },
+    {
+      "address": "0xf3d27499da2e5c8f5b5eb4c4fa23775e5978844e",
+      "hop": 3,
+      "isContract": true
+    }
+  ],
+  "edges": [
+    {
+      "txHash": "0x4c97c1e24c03bd19fcbb9c4eb2fcadf476caf5730e8621cd18183a0b333550d9",
+      "blockNumber": 11672097,
+      "txIndex": 43,
+      "logIndex": -1,
+      "from": "0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1",
+      "to": "0xb5caaba79498946cfac630fca2b5f0f352e17674",
+      "asset": "ETH",
+      "amount": "122215791402540",
+      "hop": 0,
+      "direction": "down"
+    },
+    {
+      "txHash": "0x8191a88cc204b13dc7ae80a19e669fe92543a7c2b03f5fd31f6b11b309cb338b",
+      "blockNumber": 11672229,
+      "txIndex": 24,
+      "logIndex": -1,
+      "from": "0xb5caaba79498946cfac630fca2b5f0f352e17674",
+      "to": "0xb5f5fd2be8521223b72c75951ce34e520360bf3a",
+      "asset": "ETH",
+      "amount": "9977211319981000",
+      "hop": 1,
+      "direction": "down"
+    },
+    {
+      "txHash": "0x06e5bac0ec83f01b81c880a6b2ac379062418fb93bfa931570efb1d77d1fa5b2",
+      "blockNumber": 11672452,
+      "txIndex": 35,
+      "logIndex": -1,
+      "from": "0xb5caaba79498946cfac630fca2b5f0f352e17674",
+      "to": "0xb5f5fd2be8521223b72c75951ce34e520360bf3a",
+      "asset": "ETH",
+      "amount": "75134809342000",
+      "hop": 1,
+      "direction": "down"
+    },
+    {
+      "txHash": "0xd2019d97d488e70936ee5eb5f1637254317bd7d0d5b2e76bbd60f51702b65533",
+      "blockNumber": 11672231,
+      "txIndex": 42,
+      "logIndex": -1,
+      "from": "0xb5f5fd2be8521223b72c75951ce34e520360bf3a",
+      "to": "0x467c1a8b3f6bc7e80773d4c047adcfa8385818cf",
+      "asset": "ETH",
+      "amount": "1000000000000000",
+      "hop": 2,
+      "direction": "down"
+    },
+    {
+      "txHash": "0x9e1d9357f3940ba4fda0cd0db3d77fffdc989345d2f35e202d5121e78412623f",
+      "blockNumber": 11672439,
+      "txIndex": 28,
+      "logIndex": 51,
+      "from": "0x467c1a8b3f6bc7e80773d4c047adcfa8385818cf",
+      "to": "0xf3d27499da2e5c8f5b5eb4c4fa23775e5978844e",
+      "asset": "0xf9d81dc49d9f0036cf0dba56946f291f61561e2f",
+      "amount": "3000000000000000000",
+      "hop": 3,
+      "direction": "down"
+    }
+  ],
+  "truncated": false,
+  "truncatedAt": []
+}

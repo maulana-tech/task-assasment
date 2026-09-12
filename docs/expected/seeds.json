@@ -1,0 +1,12 @@
+{
+  "note": "Queries behind README 'Seed transactions and addresses'. `npm run verify` re-runs each against the local DB and diffs against <key>.json (nodes, edges, hops). isContract is ignored because it is resolved lazily.",
+  "queries": [
+    { "key": "tx1",   "kind": "tx",      "value": "0x4c97c1e24c03bd19fcbb9c4eb2fcadf476caf5730e8621cd18183a0b333550d9", "opts": { "depth": 3, "direction": "down" } },
+    { "key": "tx2",   "kind": "tx",      "value": "0x8ccef51b8e71a1654ec70f0bbf611b9cca05c24b10775d77bfeb9a1c672ee8c4", "opts": { "depth": 3, "direction": "down" } },
+    { "key": "tx3",   "kind": "tx",      "value": "0x684e9a9c970c7fb86713f7abab4977145a119c1937ca04b1a2316be6746c1e21", "opts": { "depth": 3, "direction": "down" } },
+    { "key": "addr1", "kind": "address", "value": "0x08ead670c7b652707010e400768a7303a7b3d8de", "opts": { "depth": 3, "direction": "down" } },
+    { "key": "addr2", "kind": "address", "value": "0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1", "opts": { "depth": 3, "direction": "down" } },
+    { "key": "hops1", "kind": "hops",    "from": "0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1", "to": "0xf3d27499da2e5c8f5b5eb4c4fa23775e5978844e", "opts": {} },
+    { "key": "hops2", "kind": "hops",    "from": "0x08ead670c7b652707010e400768a7303a7b3d8de", "to": "0xa396a53d1f6071defabeaa077693c58551a706fb", "opts": {} }
+  ]
+}
