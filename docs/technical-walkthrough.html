@@ -663,6 +663,279 @@ function graph(edges: [number, number, string, string, string?][]): Db</code></p
   Assessment: <em>"In the technical interview we walk through your submission, ask you to explain specific code regardless of who authored it, and add a new requirement live. Be ready to run your system."</em>
 </div>
 
+<!-- 6.0 OPENING -->
+<h3 id="pembuka">6.0 Opening — Introduction & Orientation</h3>
+
+<div class="highlight">
+  <strong>Important:</strong> Interviews usually open with general questions before going technical. Prepare natural, specific answers tied to this project.
+</div>
+
+<!-- INTRODUCTION -->
+<h4>Q: "Tell me about yourself"</h4>
+<pre><code>Hello, I'm Muhammad Maulana Firdaussyah.
+I'm a Fullstack Developer with 3+ years at KonaKorp.
+
+I focus on the TypeScript ecosystem — React, Next.js, Node.js.
+Recently I've been active in Web3/AI hackathons, 7 awards including:
+1st Winner Refactory Hackathon 2025, Top 5 Base Web3 Hackathon 2026,
+and 1st Winner Bounty Challenge Terminal3 2026.
+
+For this assessment I built a Transaction Trace System for Sepolia.
+It traces ETH and ERC-20 transfer flows from a single tx/address,
+up to several hops forward and backward.
+What's interesting: it handles reorgs, temporal rules per-hop,
+and unreliable public RPC. I used Node.js + SQLite + viem —
+one runtime dependency only.</code></pre>
+
+<h4>Q: "Why are you interested in this position?"</h4>
+<pre><code>SmartM2M focuses on blockchain infrastructure, which is my sweet spot.
+
+From hackathon experience — Crieta App (DeFi workflow studio),
+Larel (privacy transactions), Thia-Term (TEE + KYC) — I understand
+that blockchain isn't just CRUD. There are distributed systems,
+mutable data, and edge cases that don't exist in typical web apps.
+
+This position is also technically challenging: the trace system
+must be temporally correct, handle reorgs, and be publicly verifiable.
+That's exactly the kind of problem I enjoy solving.</code></pre>
+
+<h4>Q: "What's your greatest strength?"</h4>
+<pre><code>I can own a project from architecture through deployment.
+
+At KonaKorp I built internal operational apps solo — from requirements,
+database design, API implementation, to deployment.
+At hackathons I usually lead as sole developer handling the full stack:
+React/Next.js frontend, Node.js backend, smart contracts.
+
+In this trace project, I understand the "why" behind every decision.
+For example, temporal rule per-hop isn't just relative to seed —
+because money can move before the recipient has funds.
+Details like this separate a correct trace from an incorrect one.</code></pre>
+
+<!-- EXPERIENCE -->
+<h4>Q: "Tell me about your blockchain experience"</h4>
+<pre><code>I'm quite active in Web3. My projects include:
+
+1. Crieta App — DeFi workflow studio, visual workflow + on-chain deployment
+2. Larel — privacy transactions on Flare Network (deposit, withdraw, swap)
+3. Thia-Term — terminal with Terminal3 SDK, TEE and KYC
+4. eNIX App — yield vault aggregator with FHE (Fully Homomorphic Encryption)
+5. YourSave — programmable payment splitting on Flare
+
+From these projects I understand:
+- How EVM events work (topics, data, log index)
+- Differences between native ETH, ERC-20, and ERC-721
+- Smart contract development (Solidity, Foundry, Hardhat)
+- Frontend integration with Web3 wallets
+
+This trace system is different: I'm not developing smart contracts,
+but EXTRACTING data from the blockchain and tracing fund flows.
+It's a different perspective — more data engineering than dApp.</code></pre>
+
+<h4>Q: "Have you worked with TypeScript/Node.js before?"</h4>
+<pre><code>Yes, TypeScript is my daily driver. 3+ years at KonaKorp.
+
+Previous projects use:
+- Next.js + React (frontend)
+- Express.js / NestJS (backend)
+- PostgreSQL / MongoDB (database)
+- Prisma ORM (type-safe DB queries)
+
+For this project I used some advanced Node.js features:
+- node:sqlite (built-in, experimental) — zero dependency
+- node:test (built-in test runner) — no Jest/Vitest needed
+- BigInt for large Ethereum numbers
+- node:http without framework — only 1 dependency (viem)
+
+Interesting: I usually use Prisma + Postgres, but SQLite
+is sufficient for a single-user trace tool this time.
+I can adapt the tech stack to the need, not just habit.</code></pre>
+
+<!-- PROBLEM SOLVING -->
+<h3 id="problem-solving">6.0.1 Problem Solving Approach</h3>
+
+<h4>Q: "How did you approach this project from the start?"</h4>
+<pre><code>First, I read the requirements end-to-end. What's needed:
+ingest, storage, trace, API, robustness. I broke it down into
+layers that could be built incrementally.
+
+My order:
+1. Database schema — the foundation, must be correct first
+2. Ingestion — fetch data from RPC, store in SQLite
+3. Trace algorithm — BFS with temporal rules
+4. API — expose trace via HTTP
+5. Tests — verify all edge cases
+6. Verification — compare against seed queries
+
+I tested each layer before moving on. This is my pattern
+at KonaKorp too: build small, test, verify, then expand.</code></pre>
+
+<h4>Q: "When facing a problem, what's your first step?"</h4>
+<pre><code>Define the problem specifically. Not "it doesn't work"
+but "this query returns empty for a tx that exists in DB".
+
+Real example: initially trace returned edges that shouldn't exist —
+a transfer that occurred BEFORE the address had funds.
+
+I isolated: checked seed edges first, then BFS step-by-step,
+found at which hop the edge was wrong.
+Root cause: temporal rule only checked relative to seed, not per-hop.
+
+Fix: record timestamp each time an address receives funds,
+next edge must be AFTER that timestamp.</code></pre>
+
+<h4>Q: "Tell me about a time you were stuck, and how you got out"</h4>
+<pre><code>Biggest blocker: reorg handling.
+
+Initially I didn't handle reorgs at all. But when ingesting
+live data from Sepolia, a block had a parentHash that didn't match.
+The system crashed because it assumed chain was always linear.
+
+I researched Ethereum reorg documentation. Then implemented:
+1. Each block, check parentHash vs stored hash
+2. If mismatch, walk backward to common ancestor
+3. Delete everything above ancestor (CASCADE)
+4. Re-ingest from there
+
+Took 3-4 iterations to get right — including handling the edge case
+where reorg happens after ingestion stops (verifyTail).</code></pre>
+
+<h4>Q: "How do you prioritize features?"</h4>
+<pre><code>I use MoSCoW:
+
+Must (must work):
+- Ingest data from RPC to SQLite
+- Trace transactions/addresses with BFS
+- REST API for queries
+- Tests for trace and ingestion
+
+Should (important for robustness):
+- Reorg handling
+- Idempotency (ingest 2x = same result)
+- Retry with backoff
+- Follow mode (real-time)
+
+Could (nice-to-have):
+- Find-seeds tool
+- Verification command
+- Architecture documentation
+
+Won't (for now):
+- Internal call tracing
+- ERC-721/1155
+- Caching layer
+- Authentication
+
+"Must" must work perfectly first. Then add "Should" for robustness.</code></pre>
+
+<!-- AI USAGE -->
+<h3 id="ai-usage">6.0.2 AI Usage in This Project</h3>
+
+<div class="warning">
+  <strong>Important:</strong> Assessment evaluates "AI collaboration — honest attribution; the chat log shows you directing, verifying, and improving the tool's output." Be honest and specific.
+</div>
+
+<h4>Q: "How did you use AI in this project?"</h4>
+<pre><code>I used Claude Code as a pair programmer.
+
+What I wrote myself:
+- Ingestion service (polling, reorg handling, retry logic)
+- Data model (SQLite schema, indexes, prepared statements)
+- Trace algorithm (BFS, temporal rules, cycle termination)
+
+What AI helped write (I reviewed and approved):
+- API layer (HTTP routes, validation, parameter parsing)
+- Test suites (22 tests with FakeChain mock)
+- Documentation (README, architecture doc)
+
+Split: core logic 100% me, boilerplate AI.
+But what matters most: I can explain EVERY line of code.
+The interviewer can ask anytime, I can answer.</code></pre>
+
+<h4>Q: "What did you do when AI generated wrong code?"</h4>
+<pre><code>Real examples:
+
+1. AI generated retry logic that retried ALL errors, including
+   "range too large". I corrected: that's not a transient error,
+   must be handled with span halving, not retry.
+
+2. AI generated tests that were too generic. I added
+   specific edge cases: reorg at block 16, cursor resume
+   from block 30, getLogs fails once then succeeds.
+
+3. AI didn't handle the case where extractTransfers must
+   filter ERC-721 (4 topics). I added the filter
+   topics.length !== 3.
+
+My process: read code → check logic → test → compare
+with expected output → fix if wrong → verify again.</code></pre>
+
+<h4>Q: "What percentage of code did AI write vs you?"</h4>
+<pre><code>From the code perspective:
+- Ingestion: 100% me
+- Data model: 100% me
+- Trace algorithm: 100% me
+- API layer: AI wrote, I approved
+- Tests: AI wrote, I verified
+- Documentation: AI wrote, I reviewed
+
+Maybe 60% AI, 40% me by lines of code.
+But that 40% is the CORE LOGIC — without it,
+the system cannot run at all.
+
+And more important than the percentage:
+I can defend all code. Interviewer asks
+any line, I can explain why it's there.</code></pre>
+
+<h4>Q: "Why not write everything yourself?"</h4>
+<pre><code>I could, but it's not efficient.
+
+AI is good for boilerplate — API routes, test boilerplate,
+documentation. I can write but it takes 3x longer.
+
+What CANNOT be delegated to AI:
+- Design decisions (why BFS, why temporal per-hop)
+- Edge case handling (reorg, idempotency, cursor resume)
+- Trade-off reasoning (SQLite vs Postgres)
+
+These require contextual understanding that AI doesn't have.
+I DIRECT the AI, not the other way around.
+
+Example: I said "create tests for reorg handling"
+— but I defined the cases: block 16 fork,
+ancestor at block 15, rollback must be correct.</code></pre>
+
+<h4>Q: "What are the risks of using AI, and how do you mitigate?"</h4>
+<pre><code>Main risk: not understanding the code you submit.
+
+But I mitigate by:
+1. Reading EVERY line of code before commit
+2. Running all tests, understanding why pass/fail
+3. Being able to explain why every decision was made
+4. Complete chat artifact — all conversations transparent
+
+If asked "explain line X in trace.ts", I can answer.
+If asked "why BFS not DFS", I can justify.
+
+This distinguishes from applicants who just copy-paste
+without understanding. I DIRECT the AI, not vice versa.</code></pre>
+
+<h4>Q: "Tell me about your workflow with AI"</h4>
+<pre><code>My workflow:
+
+1. I define the problem: "need a trace system for Sepolia"
+2. I break down: what must exist
+3. I start with what's most critical: schema + ingestion + trace
+4. After core works, I delegate to AI for additional layers:
+   "create HTTP API for this trace function"
+   "write tests for this edge case"
+5. I review AI output, correct if wrong
+6. I verify with test and seed queries
+7. I document: what AI wrote, what I changed
+
+Every step has verification. No "AI writes, directly commit".
+Everything goes through my code review.</code></pre>
+
 <!-- 6.1 Code Walkthrough -->
 <h3 id="code-walkthrough">6.1 Code Walkthrough</h3>
 
