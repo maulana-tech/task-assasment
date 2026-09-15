@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sepolia Transaction Trace System — Panduan Teknis</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #d2a8ff;
+      --accent4: #f0883e;
+      --red: #f85149;
+      --code-bg: #1c2128;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 2rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin-bottom: 2rem; color: var(--accent); }
+    h2 { font-size: 1.5rem; color: var(--accent); margin-top: 3rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); padding-left: 0.75rem; }
+    h3 { font-size: 1.2rem; color: var(--accent3); margin-top: 2rem; margin-bottom: 0.75rem; }
+    h4 { font-size: 1rem; color: var(--accent4); margin-top: 1.5rem; margin-bottom: 0.5rem; }
+    p, li { margin-bottom: 0.5rem; }
+    ul, ol { padding-left: 1.5rem; }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; background: var(--code-bg); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; color: var(--accent2); }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin: 1rem 0; line-height: 1.5; }
+    pre code { background: none; padding: 0; font-size: 0.85em; color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95em; }
+    th, td { border: 1px solid var(--border); padding: 0.6rem 0.8rem; text-align: left; }
+    th { background: var(--surface); color: var(--accent); font-weight: 600; }
+    tr:hover { background: rgba(88, 166, 255, 0.05); }
+    .highlight { background: rgba(88, 166, 255, 0.1); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    .warning { background: rgba(240, 136, 62, 0.1); border-left: 3px solid var(--accent4); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    .success { background: rgba(63, 185, 80, 0.1); border-left: 3px solid var(--accent2); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+    .toc-title { font-weight: 600; color: var(--accent); margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+    .toc a:hover { color: var(--accent); }
+    .qna { margin: 1rem 0; }
+    .question { font-weight: 600; color: var(--accent4); margin-bottom: 0.25rem; }
+    .tag { display: inline-block; background: var(--accent); color: var(--bg); padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-right: 0.3em; }
+    .tag-green { background: var(--accent2); }
+    .flow-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; font-family: 'SF Mono', monospace; font-size: 0.85em; line-height: 1.6; white-space: pre; overflow-x: auto; }
+    @media (max-width: 768px) { body { padding: 1rem; } h1 { font-size: 1.5rem; } h2 { font-size: 1.2rem; } }
+  </style>
+</head>
+<body>
+
+<h1>Panduan Teknis — Sepolia Transaction Trace System</h1>
+
+<div class="toc">
+  <div class="toc-title">Daftar Isi</div>
+  <ul>
+    <li><a href="#structure">1. Struktur Project</a></li>
+    <li><a href="#files">2. Penjelasan Per File</a></li>
+    <li><a href="#tests">3. Suite Testing</a></li>
+    <li><a href="#dataflow">4. Alur Data</a></li>
+    <li><a href="#decisions">5. Keputusan Desain Utama</a></li>
+    <li><a href="#interview">6. Persiapan Interview</a>
+      <ul>
+        <li><a href="#code-walkthrough">6.1 Penjelasan Kode</a></li>
+        <li><a href="#system-design-q">6.2 Pertanyaan System Design</a></li>
+        <li><a href="#algorithm-q">6.3 Pertanyaan Algoritma</a></li>
+        <li><a href="#live-req">6.4 Requirement Live</a></li>
+        <li><a href="#behavioral-q">6.5 Pertanyaan Behavioral</a></li>
+        <li><a href="#demo">6.6 Script Demo</a></li>
+        <li><a href="#cheatsheet">6.7 Cheat Sheet</a></li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- ==================== SECTION 1 ==================== -->
+<h2 id="structure">1. Struktur Project</h2>
+
+<div class="flow-box">sepolia-trace/
+├── .env.example              # Template RPC endpoint
+├── .env                      # Config live (gitignored)
+├── package.json              # Dependencies, scripts, engine constraint
+├── tsconfig.json             # Config TypeScript
+├── src/
+│   ├── config.ts             # Parsing environment variable
+│   ├── rpc.ts                # Viem client, retry logic, interface ChainReader
+│   ├── db.ts                 # Schema SQLite, operasi CRUD
+│   ├── ingest.ts             # Ingest block, penanganan reorg, ekstraksi transfer
+│   ├── trace.ts              # Algoritma BFS trace, hop terpendek
+│   ├── server.ts             # Server HTTP API
+│   └── cli.ts                # Perintah CLI (ingest, verify, find-seeds)
+├── test/
+│   ├── trace.test.ts         # 16 test algoritma trace
+│   └── ingest.test.ts        # 6 test kasus edge ingestion
+└── docs/
+    ├── system-design.md      # Dokumentasi arsitektur
+    ├── contribution-attribution.md
+    ├── chat-artifact.md
+    └── expected/             # Output expected seed query
+        ├── seeds.json        # Manifest 7 seed query
+        ├── tx1.json, tx2.json, tx3.json
+        ├── addr1.json, addr2.json
+        └── hops1.json, hops2.json</div>
+
+<!-- ==================== SECTION 2 ==================== -->
+<h2 id="files">2. Penjelasan Per File</h2>
+
+<!-- package.json -->
+<h3><code>package.json</code></h3>
+<pre><code>{
+  "engines": { "node": ">=22.5" },       // node:sqlite butuh 22+
+  "dependencies": { "viem": "^2.21.0" }, // Hanya 1 runtime dependency
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",                     // Eksekusi TS tanpa build step
+    "typescript": "^5.6.0"
+  }
+}</code></pre>
+
+<p><strong>Script utama:</strong></p>
+<ul>
+  <li><code>npm test</code> — test runner bawaan via <code>node --import tsx --test</code></li>
+  <li><code>npm run ingest</code> — CLI dengan env file dimuat</li>
+  <li><code>npm run dev</code> — server API di port 3000</li>
+  <li><code>npm run verify</code> — ulang seed query dan bandingkan dengan expected JSON</li>
+  <li><code>npm run typecheck</code> — <code>tsc --noEmit</code></li>
+</ul>
+
+<hr>
+
+<!-- config.ts -->
+<h3><code>src/config.ts</code> <span class="tag">14 baris</span></h3>
+<p><strong>Tujuan:</strong> Parse environment variable, gagal cepat jika variable wajib tidak ada.</p>
+<pre><code>export const SEPOLIA_CHAIN_ID = 11155111;
+
+function required(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var ${name}`);
+  return v;
+}
+
+export const config = {
+  rpcUrl: () => required('SEPOLIA_RPC_URL'),  // Lazy eval
+  dbPath: process.env.DB_PATH ?? 'data/trace.db',
+  port: Number(process.env.PORT ?? 3000),
+  confirmations: Number(process.env.CONFIRMATIONS ?? 6),
+};</code></pre>
+
+<div class="highlight">
+  <strong>Kenapa <code>rpcUrl()</code> lazy?</strong> Test tidak butuh RPC URL. Dibuat function supaya error hanya muncul saat CLI benar-benar coba koneksi.
+</div>
+
+<hr>
+
+<!-- rpc.ts -->
+<h3><code>src/rpc.ts</code> <span class="tag">115 baris</span></h3>
+<p><strong>Tujuan:</strong> Abstraksi atas Ethereum JSON-RPC via <code>viem</code>. Mendefinisikan interface <code>ChainReader</code> yang bisa di-mock saat testing.</p>
+
+<h4>Tipe data utama</h4>
+<pre><code>export type RpcBlock = {
+  number: number;
+  hash: string;
+  parentHash: string;
+  timestamp: number;
+  transactions: { hash: string; transactionIndex: number; from: string; to: string | null; value: bigint }[];
+};
+
+export type RpcLog = {
+  address: string;
+  topics: string[];
+  data: string;
+  blockNumber: number;
+  transactionHash: string;
+  transactionIndex: number;
+  logIndex: number;
+};
+
+export interface ChainReader {
+  blockNumber(): Promise&lt;number&gt;;
+  getBlock(n: number): Promise&lt;RpcBlock&gt;;
+  getTransferLogs(from: number, to: number): Promise&lt;RpcLog[]&gt;;
+  getCode(address: string): Promise&lt;string&gt;;
+}</code></pre>
+
+<h4><code>withRetry</code></h4>
+<ul>
+  <li>Retry dengan exponential backoff: 250ms → 500ms → 1s → 2s → 4s → 8s</li>
+  <li>Random jitter (0-100ms) untuk hindari thundering herd</li>
+  <li>TIDAK retry error <code>isRangeTooLarge</code> — itu trigger span halving</li>
+</ul>
+
+<h4><code>isRangeTooLarge</code></h4>
+<p>Pattern-matching pesan error dari berbagai provider. Cek: "more than", "too many", "range too large", "block range", "exceed", "limited to", "timeout".</p>
+
+<h4><code>assertSepolia</code></h4>
+<p>Panggil <code>eth_chainId</code> dan throw jika bukan 11155111. Dijalankan di awal setiap perintah ingest.</p>
+
+<h4>Konstanta topic transfer</h4>
+<pre><code>export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';</code></pre>
+<p>Signature event ERC-20 <code>Transfer(address,address,uint256)</code>.</p>
+
+<hr>
+
+<!-- db.ts -->
+<h3><code>src/db.ts</code> <span class="tag">191 baris</span></h3>
+<p><strong>Tujuan:</strong> Schema SQLite, prepared statements, semua operasi database.</p>
+
+<h4>Schema (4 tabel)</h4>
+<pre><code>-- Header block. parentHash krusial untuk deteksi reorg.
+blocks (
+  number      INTEGER PRIMARY KEY,
+  hash        TEXT NOT NULL,
+  parent_hash TEXT NOT NULL,
+  timestamp   INTEGER NOT NULL
+)
+
+-- Edge transfer. Setiap transfer ETH atau event ERC-20 = 1 baris.
+transfers (
+  id           INTEGER PRIMARY KEY,
+  tx_hash      TEXT NOT NULL,
+  block_number INTEGER NOT NULL REFERENCES blocks(number) ON DELETE CASCADE,
+  tx_index     INTEGER NOT NULL,
+  log_index    INTEGER NOT NULL,   -- -1 = native ETH, >=0 = event ERC-20
+  from_addr    TEXT NOT NULL,
+  to_addr      TEXT NOT NULL,
+  asset        TEXT NOT NULL,      -- "ETH" atau alamat contract ERC-20
+  amount       TEXT NOT NULL,      -- string desimal (uint256)
+  UNIQUE (tx_hash, log_index)
+)
+
+-- Cache alamat. is_contract di-resolve secara lazy via eth_getCode.
+addresses (
+  address     TEXT PRIMARY KEY,
+  is_contract INTEGER,             -- NULL = tidak diketahui, 0 = EOA, 1 = contract
+  first_seen  INTEGER NOT NULL
+)
+
+-- Cursor ingest. 1 baris, lacak block tertinggi yang sudah committed.
+cursor (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  last_block INTEGER NOT NULL
+)</code></pre>
+
+<h4>Index</h4>
+<pre><code>ix_transfers_from ON transfers(from_addr, block_number)
+ix_transfers_to   ON transfers(to_addr,   block_number)
+ix_transfers_tx   ON transfers(tx_hash)</code></pre>
+<ul>
+  <li><code>from_addr + block_number</code>: trace BFS query "semua outgoing dari X di range"</li>
+  <li><code>to_addr + block_number</code>: sama untuk incoming (upstream)</li>
+  <li><code>tx_hash</code>: lookup <code>transfersByTx()</code> untuk seed tx</li>
+</ul>
+
+<h4>Method utama</h4>
+<table>
+  <tr><th>Method</th><th>Fungsi</th></tr>
+  <tr><td><code>writeBlock(block, transfers)</code></td><td>DELETE → INSERT block + transfers + cursor — 1 transaksi SQLite</td></tr>
+  <tr><td><code>rollbackFrom(n)</code></td><td><code>DELETE FROM blocks WHERE number >= n</code> (cascades)</td></tr>
+  <tr><td><code>getCursor()</code></td><td>Block tertinggi yang sudah committed</td></tr>
+  <tr><td><code>window()</code></td><td><code>[MIN(number), MAX(number)]</code></td></tr>
+  <tr><td><code>transfersByTx(txHash)</code></td><td>Semua transfer untuk 1 tx, diurutkan berdasarkan log_index</td></tr>
+  <tr><td><code>edgesFor(side, addrs, lo, hi, limit)</code></td><td>Union transfer outgoing/incoming di block range</td></tr>
+  <tr><td><code>isContract(addr)</code></td><td>Cek cache, return <code>null</code> jika tidak diketahui</td></tr>
+  <tr><td><code>setIsContract(addr, val)</code></td><td>Upsert ke tabel addresses</td></tr>
+  <tr><td><code>counts()</code></td><td><code>{ blocks, transfers, addresses }</code></td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Kenapa DELETE lalu INSERT?</strong> Idempotency. Run ulang range yang sama menghasilkan baris yang identik.
+  <br><strong>Kenapa WAL mode?</strong> Baca concurrent (API) sementara ingester menulis.
+</div>
+
+<hr>
+
+<!-- ingest.ts -->
+<h3><code>src/ingest.ts</code> <span class="tag">181 baris</span></h3>
+<p><strong>Tujuan:</strong> Ambil block dari RPC, ekstraksi transfer, tulis ke SQLite. Tangani reorg, retry, batasan provider.</p>
+
+<h4>Alur <code>ingestRange</code></h4>
+<ol>
+  <li>Mulai dengan chunk size (default 200), dibatasi [10, 2000]</li>
+  <li>Untuk setiap chunk:
+    <ul>
+      <li><code>rpc.getTransferLogs(n, end)</code> — event Transfer ERC-20</li>
+      <li>Jika "too many results" → bagi 2 chunk, retry</li>
+      <li><code>rpc.getBlock(b)</code> untuk setiap block (parallel, concurrency=8)</li>
+      <li>Cek <code>parentHash</code> → deteksi reorg</li>
+      <li>Jika reorg: cari common ancestor, rollback, mulai ulang</li>
+      <li>Jika tidak: <code>extractTransfers()</code> → <code>db.writeBlock()</code></li>
+    </ul>
+  </li>
+  <li>Log progress, kali 2 chunk size (sampai ceiling)</li>
+</ol>
+
+<h4><code>extractTransfers</code></h4>
+<p>Dua sumber transfer:</p>
+<ol>
+  <li><strong>Native ETH:</strong> <code>tx.value > 0n &amp;&amp; tx.to !== null</code> → <code>logIndex: -1</code>, <code>asset: 'ETH'</code></li>
+  <li><strong>ERC-20:</strong> <code>topics.length === 3 &amp;&amp; data.length === 66</code> → ekstrak from/to dari topics, amount dari data
+    <ul>
+      <li>Filter out: 4-topic (ERC-721), data pendek (bukan uint256)</li>
+    </ul>
+  </li>
+</ol>
+
+<h4>Penanganan reorg</h4>
+<p>Jalan backward membandingkan hash tersimpan dengan hash live. Yang pertama match = common ancestor. Hapus semua di atasnya, ingest ulang.</p>
+
+<h4><code>verifyTail</code></h4>
+<p>Untuk follow mode: cek 12 block tersimpan terakhir setiap poll. Jika hash tidak cocok → rollback.</p>
+
+<hr>
+
+<!-- trace.ts -->
+<h3><code>src/trace.ts</code> <span class="tag">213 baris</span></h3>
+<p><strong>Tujuan:</strong> Algoritma BFS trace dan hop terpendek. Inti dari sistem.</p>
+
+<h4>Tipe data</h4>
+<pre><code>type TraceOptions = {
+  depth?: number;           // max hop (default 3)
+  direction?: 'down' | 'up' | 'both';
+  maxNodes?: number;        // default 500
+  maxEdgesPerNode?: number; // default 200
+  fromBlock?: number;
+  toBlock?: number;
+};
+
+type TraceResult = {
+  seed: { type: 'tx' | 'address'; value: string };
+  window: [number, number];
+  nodes: TraceNode[];       // { address, hop, isContract }
+  edges: TraceEdge[];       // Transfer + { hop, direction }
+  truncated: boolean;
+  truncatedAt: string[];
+};</code></pre>
+
+<h4><code>traceTx</code></h4>
+<ol>
+  <li>Muat seed edges via <code>db.transfersByTx(txHash)</code></li>
+  <li>Set posisi seed: <code>(block, txIndex, -1)</code></li>
+  <li>BFS downstream dari penerima</li>
+  <li>BFS upstream dari pengirim</li>
+  <li><code>finish()</code>: bangun nodes, dedup edges</li>
+</ol>
+
+<h4>Aturan temporal</h4>
+<pre><code>const after = (e: Transfer, p: Pos) => cmp(e, p) > 0;
+const before = (e: Transfer, p: Pos) => cmp(e, p) < 0;
+const cmp = (e: Transfer, p: Pos) =>
+  e.blockNumber - p.block || e.txIndex - p.txIndex || e.logIndex - p.logIndex;</code></pre>
+<p>Membandingkan tuple <code>(block, txIndex, logIndex)</code>. Downstream harus setelah; upstream harus sebelum.</p>
+
+<h4>Terminasi siklus</h4>
+<p>Setiap alamat dikunjungi sekali di hop terpendek. BFS menjamin kunjungan pertama = terpendek.</p>
+
+<h4>Batas fan-out</h4>
+<pre><code>if (edges.length > o.maxEdgesPerNode) {
+  edges = edges.slice(0, o.maxEdgesPerNode);
+  res.truncated = true;
+  res.truncatedAt.push(addr);
+}</code></pre>
+
+<hr>
+
+<!-- server.ts -->
+<h3><code>src/server.ts</code> <span class="tag">122 baris</span></h3>
+<p><strong>Tujuan:</strong> Server HTTP API menggunakan <code>node:http</code>.</p>
+
+<table>
+  <tr><th>Route</th><th>Handler</th><th>Parameter</th></tr>
+  <tr><td><code>GET /health</code></td><td>Status sistem</td><td>tidak ada</td></tr>
+  <tr><td><code>GET /trace/tx/:hash</code></td><td>Trace transaksi</td><td><code>depth</code>, <code>direction</code>, <code>maxNodes</code>, <code>maxEdgesPerNode</code>, <code>fromBlock</code>, <code>toBlock</code></td></tr>
+  <tr><td><code>GET /trace/address/:addr</code></td><td>Trace alamat</td><td>sama seperti di atas</td></tr>
+  <tr><td><code>GET /hops?from=&amp;to=</code></td><td>Jalur terpendek</td><td><code>maxDepth</code>, <code>undirected</code>, opts sama</td></tr>
+</table>
+
+<h4>Validasi</h4>
+<ul>
+  <li>Hash: <code>/^0x[0-9a-f]{64}$/i</code></li>
+  <li>Alamat: <code>/^0x[0-9a-f]{40}$/i</code></li>
+  <li>Direction: harus <code>down|up|both</code></li>
+  <li>Batas: <code>depth ≤ 10</code>, <code>maxNodes ≤ 5000</code>, <code>maxEdgesPerNode ≤ 1000</code>, <code>maxDepth ≤ 12</code></li>
+</ul>
+
+<h4>Klasifikasi contract</h4>
+<p>Setelah trace, cek node dengan <code>isContract === null</code>. Maks 50 per query via <code>eth_getCode</code>. Cache di tabel <code>addresses</code>.</p>
+
+<hr>
+
+<!-- cli.ts -->
+<h3><code>src/cli.ts</code> <span class="tag">148 baris</span></h3>
+<p><strong>Tujuan:</strong> Entry point CLI untuk perintah ingest, verify, dan find-seeds.</p>
+
+<table>
+  <tr><th>Perintah</th><th>Fungsi</th></tr>
+  <tr><td><code>npm run ingest -- --from A --to B</code></td><td>Validasi range, cek cursor untuk resume, panggil <code>ingestRange()</code></td></tr>
+  <tr><td><code>npm run ingest -- --follow [--from A]</code></td><td>Handler SIGINT, panggil <code>follow()</code></td></tr>
+  <tr><td><code>npm run verify</code></td><td>Baca <code>seeds.json</code>, jalankan setiap query, bandingkan dengan expected</td></tr>
+  <tr><td><code>npm run find-seeds</code></td><td>Scan 20k transfer ETH, cari txs/alamat dengan ≥ 3 hop</td></tr>
+</table>
+
+<!-- ==================== SECTION 3 ==================== -->
+<h2 id="tests">3. Suite Testing</h2>
+
+<h3><code>test/trace.test.ts</code> <span class="tag tag-green">16 test</span></h3>
+<p>Helper test membuat DB in-memory dengan notasi edge compact:</p>
+<pre><code>function addr(c: string) { return '0x' + c.repeat(40); }
+function tx(n: number) { return '0x' + n.toString(16).padStart(64, '0'); }
+function graph(edges: [number, number, string, string, string?][]): Db</code></pre>
+
+<table>
+  <tr><th>Test</th><th>Yang diverifikasi</th></tr>
+  <tr><td>downstream mengikuti rantai</td><td>A→B→C→D→E, depth=3 → hop 0-3</td></tr>
+  <tr><td>depth membatasi jalan</td><td>depth=1 → hanya A, B, C</td></tr>
+  <tr><td>filter temporal</td><td>Downstream mengecualikan pre-seed; upstream mengecualikan post-seed</td></tr>
+  <tr><td>txIndex block yang sama</td><td>2 tx di block sama diurutkan berdasarkan txIndex</td></tr>
+  <tr><td>siklus berhenti</td><td>A→B→C→A → A tetap di hop 0, 3 node total</td></tr>
+  <tr><td>batas fan-out</td><td>HUB dengan 30 edge, limit=5 → truncated=true</td></tr>
+  <tr><td>maxNodes</td><td>maxNodes=3 membatasi alamat yang dikunjungi</td></tr>
+  <tr><td>window membatasi</td><td>toBlock=11 menyembunyikan edge block 12+</td></tr>
+  <tr><td>tx tidak diketahui</td><td>Return undefined</td></tr>
+  <tr><td>alamat kedua arah</td><td>Dari B: capai C (down), A & F (up)</td></tr>
+  <tr><td>ETH + ERC-20 terjaga</td><td>Kedua tipe aset di hasil</td></tr>
+  <tr><td>hops jalur terpendek</td><td>A→B→C→D + A→D langsung → terpendek 1</td></tr>
+  <tr><td>hops arah</td><td>E→A tidak tercapai, undirected menemukan jalur</td></tr>
+  <tr><td>hops maxDepth</td><td>maxDepth=2 tidak bisa capai E</td></tr>
+  <tr><td>temporal per-hop</td><td>C→D sebelum dana C → dikecualikan</td></tr>
+  <tr><td>kedatangan terawal</td><td>2 jalur ke C di hop 1, yang lebih awal menang</td></tr>
+</table>
+
+<h3><code>test/ingest.test.ts</code> <span class="tag tag-green">6 test</span></h3>
+
+<p><strong>Mock <code>FakeChain</code>:</strong></p>
+<pre><code>class FakeChain implements ChainReader {
+  calls = { getBlock: 0, getLogs: 0 };
+  failLogsOnce = false;
+  forkFrom = Infinity;  // simulasi reorg di block ini
+  fork = '';            // suffix untuk hash yang di-fork
+  head = 100;
+}</code></pre>
+
+<table>
+  <tr><th>Test</th><th>Yang diverifikasi</th></tr>
+  <tr><td>extractTransfers</td><td>ETH disertakan, zero-value dikecualikan, contract creation dikecualikan, ERC-20 disertakan, ERC-721 dikecualikan</td></tr>
+  <tr><td>idempoten</td><td>Ingest 2x → jumlah sama</td></tr>
+  <tr><td>rollback reorg</td><td>Fork di 16 → rollback, tx lama dihapus, tx baru ada</td></tr>
+  <tr><td>verifyTail</td><td>Reorg terlambat terdeteksi, di-rollback</td></tr>
+  <tr><td>getLogs halving</td><td>Span bagi 2 dari 100 ke 50 saat error</td></tr>
+  <tr><td>cursor bisa resume</td><td>Gagal di block 30 → cursor di chunk terakhir, resume berhasil</td></tr>
+</table>
+
+<!-- ==================== SECTION 4 ==================== -->
+<h2 id="dataflow">4. Alur Data</h2>
+
+<h3>Alur Ingestion</h3>
+<div class="flow-box">CLI (cli.ts)
+  → assertSepolia()          // verifikasi chain ID
+  → createChainReader()      // viem client
+  → ingestRange()            // (ingest.ts)
+    → untuk setiap chunk:
+        rpc.getTransferLogs()  // event ERC-20
+        rpc.getBlock() × N     // header block + tx
+        untuk setiap block:
+          cek parentHash       // deteksi reorg
+          extractTransfers()
+          db.writeBlock()
+    → update cursor</div>
+
+<h3>Alur Query Trace</h3>
+<div class="flow-box">HTTP request (server.ts)
+  → route()                    // parse URL + params
+  → traceTx(db, hash, opts)    // (trace.ts)
+    → db.transfersByTx()       // seed edges
+    → bfs(db, ..., 'down')     // downstream BFS
+    → bfs(db, ..., 'up')       // upstream BFS
+    → finish()                 // bangun nodes, dedup edges
+  → classify(db, rpc, result)  // eth_getCode untuk yang tidak diketahui
+  → JSON response</div>
+
+<h3>Alur Query Hops</h3>
+<div class="flow-box">HTTP request (server.ts)
+  → route()
+  → hops(db, from, to, opts)  // (trace.ts)
+    → BFS dari source
+    → expand neighbor setiap hop
+    → cek aturan temporal
+    → return saat tujuan tercapai atau maxDepth tercapai
+  → JSON response</div>
+
+<!-- ==================== SECTION 5 ==================== -->
+<h2 id="decisions">5. Keputusan Desain Utama</h2>
+
+<div class="qna">
+  <div class="question">Kenapa SQLite bukan Postgres?</div>
+  <div class="answer">Zero infrastructure — single file, sudah ada di Node. Cukup untuk tool trace single-user. WAL mode handle concurrent reads + single writer.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Kenapa hanya transfer-only edge?</div>
+  <div class="answer">Cakup ETH + ERC-20 (2 tipe yang diminta). Internal call butuh <code>debug_traceTransaction</code> yang tidak tersedia di public endpoint.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Kenapa BFS bukan DFS?</div>
+  <div class="answer">BFS menjamin hop terpendek pertama kali. Setiap alamat dikunjungi sekali. Siklus berhenti secara alami.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Kenapa DELETE lalu INSERT per block?</div>
+  <div class="answer">Idempotency. Run ulang range yang sama menghasilkan baris identik. Granularitas block = rollback cepat saat reorg.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Kenapa klasifikasi contract lazy?</div>
+  <div class="answer">Kebanyakan alamat tidak muncul di query trace. Lazy = hanya klasifikasi saat diquery. Cache di tabel <code>addresses</code>.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Kenapa <code>log_index = -1</code> untuk native ETH?</div>
+  <div class="answer">Transfer ETH bukan event, tidak punya log index. Pakai -1 supaya constraint <code>UNIQUE (tx_hash, log_index)</code> tetap valid dan membedakan ETH dari ERC-20.</div>
+</div>
+
+<!-- ==================== SECTION 6 ==================== -->
+<h2 id="interview">6. Persiapan Interview</h2>
+
+<div class="warning">
+  Assessment: <em>"Dalam technical interview kita akan membahas submission kamu, menanyakan kode tertentu terlepas dari siapa yang menulisnya, dan menambahkan requirement baru secara live. Siap untuk menjalankan sistem kamu."</em>
+</div>
+
+<!-- ========================================== -->
+<!-- 6.0 PEMBUKA INTERVIEW -->
+<!-- ========================================== -->
+<h3 id="pembuka">6.0 Pembuka Interview — Perkenalan & Orientasi</h3>
+
+<div class="highlight">
+  <strong>Penting:</strong> Interview biasanya dibuka dengan pertanyaan umum sebelum masuk teknis. Siapkan jawaban yang natural, tidak hapalan, dan spesifik ke project ini.
+</div>
+
+<!-- PERKENALAN -->
+<h4>Q: "Ceritakan tentang diri kamu"</h4>
+<pre><code>Halo, nama saya Muhammad Maulana Firdaussyah.
+Saya Fullstack Developer dengan 3+ tahun pengalaman di KonaKorp.
+
+Saya fokus di TypeScript ecosystem — React, Next.js, Node.js.
+Belakangan saya banyak terlibat di Web3/AI hackathon, 7 penghargaan
+di antaranya: 1st Winner Refactory Hackathon 2025, Top 5 Base Web3
+Hackathon 2026, dan 1st Winner Bounty Challenge Terminal3 2026.
+
+Untuk assessment ini saya build Transaction Trace System untuk Sepolia.
+Sistemnya trace alur transfer ETH dan ERC-20 dari satu transaksi/alamat,
+sampai beberapa hop. Yang menarik: harus handle reorg, temporal rule,
+dan RPC yang sering rate-limit. Saya pakai Node.js + SQLite + viem,
+satu runtime dependency saja.</code></pre>
+
+<h4>Q: "Kenapa kamu tertarik dengan position ini?"</h4>
+<pre><code>SmartM2M fokus di blockchain infrastructure, dan itu sweet spot saya.
+
+Dari pengalaman hackathon Web3 — Crieta App (DeFi workflow studio),
+Larel (privacy transaction), Thia-Term (TEE + KYC) — saya paham
+bahwa blockchain bukan sekadar CRUD. Ada aspek distributed system,
+data yang bisa berubah, dan edge cases yang tidak ada di web biasa.
+
+Position ini juga menantang secara technical: trace system harus
+benar secara temporal, handle reorg, dan verifiable secara publik.
+Ini jenis problem yang saya nikmati.</code></pre>
+
+<h4>Q: "Apa kekuatan terbesar kamu?"</h4>
+<pre><code>Saya bisa own project dari architecture sampai deployment.
+
+Contoh: di KonaKorp saya build internal operational app sendirian —
+dari requirements, design database, implement API, sampai deploy.
+Di hackathon, saya biasanya lead/sole developer yang nangani
+full stack: frontend React/Next.js, backend Node.js, smart contract.
+
+Di project trace ini, saya paham "kenapa" di balik setiap keputusan.
+Contoh: temporal rule per-hop bukan cuma relatif ke seed — karena
+uang bisa berpindah sebelum penerima punya dana. Detail seperti ini
+yang membedakan trace yang benar dari yang salah.</code></pre>
+
+<!-- PENGALAMAN -->
+<h4>Q: "Ceritakan pengalaman kamu dengan blockchain"</h4>
+<pre><code>Saya cukup aktif di Web3. Project-project saya:
+
+1. Crieta App — DeFi workflow studio, visual workflow + on-chain deployment
+2. Larel — privacy transaction di Flare Network (deposit, withdraw, swap)
+3. Thia-Term — terminal dengan Terminal3 SDK, TEE dan KYC
+4. eNIX App — yield vault aggregator dengan FHE (Fully Homomorphic Encryption)
+5. YourSave — programmable payment splitting di Flare
+
+Dari project-project ini saya paham:
+- Cara kerja EVM event (topics, data, log index)
+- Perbedaan native ETH vs ERC-20 vs ERC-721
+- Smart contract development (Solidity, Foundry, Hardhat)
+- Frontend integration dengan Web3 wallets
+
+Trace system ini beda: saya tidak develop smart contract,
+tapi saya EXTRACT data dari blockchain dan trace alur uangnya.
+Ini perspektif berbeda — lebih ke data engineering daripada dApp.</code></pre>
+
+<h4>Q: "Pernah kerja dengan TypeScript/Node.js sebelumnya?"</h4>
+<pre><code>Ya, TypeScript adalah daily driver saya. 3+ tahun di KonaKorp.
+
+Project sebelumnya pakai:
+- Next.js + React (frontend)
+- Express.js / NestJS (backend)
+- PostgreSQL / MongoDB (database)
+- Prisma ORM (type-safe DB queries)
+
+Untuk project ini saya pakai beberapa fitur Node.js yang advanced:
+- node:sqlite (built-in, experimental) — zero dependency
+- node:test (test runner bawaan) — tidak perlu Jest/Vitest
+- BigInt untuk angka besar Ethereum
+- node:http tanpa framework — hanya 1 dependency (viem)
+
+Yang menarik: saya biasanya pakai Prisma + Postgres, tapi kali ini
+SQLite cukup untuk single-user trace tool. Saya bisa adjust
+tech stack sesuai kebutuhan, bukan habit.</code></pre>
+
+<!-- PROBLEM SOLVING -->
+<h3 id="problem-solving">6.0.1 Cara Problem Solving</h3>
+
+<h4>Q: "Bagaimana kamu approach project ini dari awal?"</h4>
+<pre><code>Pertama, saya baca requirements sampai habis. Yang diminta:
+ingest, storage, trace, API, robustness. Saya breakdown jadi
+layer-layer yang bisa dibangun secara incrementally.
+
+Urutan saya:
+1. Schema database — ini fondasi, harus benar dulu
+2. Ingestion — ambil data dari RPC, simpan ke SQLite
+3. Trace algorithm — BFS dengan temporal rule
+4. API — expose trace lewat HTTP
+5. Tests — verifikasi semua edge case
+6. Verification — bandingkan dengan seed queries
+
+Setiap layer saya test sebelum lanjut. Ini pola yang saya pakai
+juga di KonaKorp: build kecil, test, verify, baru expand.</code></pre>
+
+<h4>Q: "Saat menghadapi masalah, apa langkah pertama kamu?"</h4>
+<pre><code>Define masalah secara spesifik. Bukan "tidak bisa jalan"
+tapi "query ini return kosong untuk tx yang ada di DB".
+
+Contoh nyata: awalnya trace mengembalikan edge yang seharusnya
+tidak ada — transfer yang terjadi SEBELUM dana sampai ke alamat.
+
+Saya isolasi: cek seed edges dulu, lalu BFS step-by-step,
+lihat di hop mana edge salah muncul. Ketemu: temporal rule
+hanya cek relatif ke seed, bukan per-hop.
+
+Solusi: catat timestamp setiap kali alamat menerima dana,
+edge berikutnya harus SETELAH timestamp itu.</code></pre>
+
+<h4>Q: "Ceritakan situasi di mana kamu stuck, dan bagaimana keluar"</h4>
+<pre><code>Stuck terbesar: reorg handling.
+
+Awalnya saya tidak handle reorg sama sekali. Tapi pas ingest
+live data dari Sepolia, ada block yang parentHash-nya tidak cocok.
+Sistem crash karena assume chain selalu linear.
+
+Saya baca dokumentasi Ethereum tentang reorg. Kemudian implement:
+1. Setiap block, cek parentHash vs stored hash
+2. Jika tidak cocok, walk backward ke common ancestor
+3. Delete semua di atas ancestor (CASCADE)
+4. Re-ingest dari sana
+
+Butuh 3-4 iterasi sampai benar — termasuk handle kasus edge
+di mana reorg terjadi setelah ingestion berhenti (verifyTail).</code></pre>
+
+<h4>Q: "Bagaimana kamu memprioritaskan fitur?"</h4>
+<pre><code>Saya pakai MoSCoW:
+
+Must (harus jalan):
+- Ingest data dari RPC ke SQLite
+- Trace transaksi/alamat dengan BFS
+- REST API untuk query
+- Tests untuk trace dan ingestion
+
+Should (penting untuk robustness):
+- Reorg handling
+- Idempotency (ingest 2x = hasil sama)
+- Retry dengan backoff
+- Follow mode (real-time)
+
+Could (nice-to-have):
+- Find-seeds tool
+- Verification command
+- Architecture documentation
+
+Won't (untuk sekarang):
+- Internal call tracing
+- ERC-721/1155
+- Caching layer
+- Authentication
+
+Yang "Must" harus jalan dulu sempurna. Baru tambah "Should".</code></pre>
+
+<!-- PENGGUNAAN AI -->
+<h3 id="ai-usage">6.0.2 Penggunaan AI di Project Ini</h3>
+
+<div class="warning">
+  <strong>Penting:</strong> Assessment menilai "AI collaboration — honest attribution; the chat log shows you directing, verifying, and improving the tool's output." Jujur dan spesifik.
+</div>
+
+<h4>Q: "Bagaimana kamu pakai AI di project ini?"</h4>
+<pre><code>Saya pakai Claude Code sebagai pair programmer.
+
+Yang saya tulis sendiri:
+- Ingestion service (polling, reorg handling, retry logic)
+- Data model (schema SQLite, indexes, prepared statements)
+- Trace algorithm (BFS, temporal rule, cycle termination)
+
+Yang AI bantu tulis (saya review dan approve):
+- API layer (HTTP routes, validation, parameter parsing)
+- Test suites (22 tests dengan FakeChain mock)
+- Documentation (README, architecture doc)
+
+Split-nya kira-kira: logika inti 100% saya, boilerplate AI.
+Tapi yang paling penting: saya bisa jelaskan SETIAP baris.
+Interviewer boleh tanya kapan saja, saya bisa jawab.</code></pre>
+
+<h4>Q: "Apa yang kamu lakukan saat AI generate kode yang salah?"</h4>
+<pre><code>Contoh nyata:
+
+1. AI generate retry logic yang retry semua error, termasuk
+   "range too large". Saya koreksi: error itu bukan transient,
+   harus di-handle dengan span halving, bukan retry.
+
+2. AI generate test yang terlalu generik. Saya tambahkan
+   edge case spesifik: reorg di block 16, cursor resume
+   dari block 30, getLogs gagal sekali lalu berhasil.
+
+3. AI tidak handle kasus di mana extractTransfers harus
+   filter ERC-721 (4 topics). Saya tambahkan filter
+   topics.length !== 3.
+
+Proses saya: baca kode → cek logika → test → bandingkan
+dengan expected output →修正 jika salah → verify lagi.</code></pre>
+
+<h4>Q: "Berapa persen kode yang ditulis AI vs kamu?"</h4>
+<pre><code>Dari sisi kode:
+- Ingestion: 100% saya
+- Data model: 100% saya
+- Trace algorithm: 100% saya
+- API layer: AI tulis, saya approve
+- Tests: AI tulis, saya verify
+- Documentation: AI tulis, saya review
+
+Mungkin 60% AI, 40% saya secara baris kode.
+Tapi yang 40% itu adalah LOGIKA INTI — tanpa itu,
+sistem tidak bisa jalan.
+
+Dan yang lebih penting dari presentase:
+saya bisa defend semua kode. Interviewer tanya
+baris mana saja, saya bisa jawab kenapa ada di situ.</code></pre>
+
+<h4>Q: "Kenapa tidak tulis semua sendiri?"</h4>
+<pre><code>Bisa, tapi tidak efisien.
+
+AI bagus untuk boilerplate — API routes, test boilerplate,
+documentation. Saya bisa tulis tapi butuh waktu 3x lebih lama.
+
+Yang TIDAK bisa didelegation ke AI:
+- Design decision (kenapa BFS, kenapa temporal per-hop)
+- Edge case handling (reorg, idempotency, cursor resume)
+- Trade-off reasoning (SQLite vs Postgres)
+
+Itu semua butuh pemahaman konteks yang AI tidak punya.
+Saya ARAHKAN AI, bukan sebaliknya.
+
+Contoh: saya bilang "buatin test untuk reorg handling"
+— tapi saya yang define kasusnya: block 16 fork,
+ancestor di block 15, rollback harus benar.</code></pre>
+
+<h4>Q: "Apa risiko pakai AI, dan bagaimana kamu mitigasi?"</h4>
+<pre><code>Risiko utama: tidak paham kode yang di-submit.
+
+Tapi saya mitigasi dengan:
+1. Membaca SETIAP baris kode sebelum commit
+2. Menjalankan semua test, memahami kenapa pass/fail
+3. Bisa menjelaskan kenapa setiap keputusan diambil
+4. Chat artifact lengkap — semua conversation transparan
+
+Jika ditanya "jelaskan baris X di trace.ts", saya bisa jawab.
+Jika ditanya "kenapa pakai BFS bukan DFS", saya bisa justify.
+
+Ini yang membedakan dari applicant yang hanya copy-paste
+tanpa paham. Saya DIRECTAI, bukan sebaliknya.</code></pre>
+
+<h4>Q: "Ceritakan workflow kamu dengan AI"</h4>
+<pre><code>Workflow saya:
+
+1. Saya definisikan masalah: "butuh trace system untuk Sepolia"
+2. Saya break down: apa yang harus ada
+3. Saya mulai dari yang paling kritis: schema + ingestion + trace
+4. Setelah core jalan, saya delegasi ke AI untuk layer tambahan:
+   "buatkan HTTP API untuk trace function ini"
+   "tulis test untuk kasus edge ini"
+5. Saya review output AI, koreksi jika salah
+6. Saya verify dengan test dan seed queries
+7. Saya dokumentasi: apa yang AI tulis, apa yang saya ubah
+
+Setiap step ada verification. Tidak ada "AI tulis, langsung commit".
+Semua melewati code review saya.</code></pre>
+
+<!-- ========================================== -->
+<!-- 6.1 PENJELASAN KODE SPESIFIK -->
+<!-- ========================================== -->
+<h3 id="code-walkthrough">6.1 Penjelasan Kode — Ditanya Langsung Soal Baris Kode</h3>
+
+<h4>Q: "Apa yang terjadi kalau <code>extractTransfers</code> menerima ERC-721?"</h4>
+<p>ERC-721 Transfer punya 4 topik (signature, from, to, tokenId). Kita cek <code>topics.length !== 3</code> → di-skip. Karena assment cuma minta ETH + ERC-20, ERC-721 tidak perlu ditangkap. Kalau mau tambah nanti, tinggal ubah filternya.</p>
+
+<h4>Q: "Kenapa <code>amount</code> disimpan sebagai string, bukan number?"</h4>
+<p>uint256 Ethereum bisa sampai 2^256. JavaScript <code>Number</code> hanya sampai 2^53. Kalau pakai number, ada precision loss. <code>BigInt</code> bisa, tapi SQLite tidak support BigInt. Jadi kita simpan sebagai string desimal: <code>"1000000000000000000"</code>. Bisa dikonversi balik kapan saja.</p>
+
+<h4>Q: "Apa yang terjadi jika <code>writeBlock</code> gagal di tengah loop?"</h4>
+<p>Masuk catch block → <code>ROLLBACK</code>. Semua perubahan dibatalkan. Block yang belum selesai tidak masuk DB. Karena cursor tidak diupdate, run berikutnya akan resume dari block terakhir yang berhasil. Tidak ada partial write.</p>
+
+<h4>Q: "Bagaimana cara kerja <code>topicToAddress</code>?"</h4>
+<pre><code>const topicToAddress = (t: string) => ('0x' + t.slice(-40)).toLowerCase();</code></pre>
+<p>Topic ERC-20 berformat 32 bytes (66 karakter hex termasuk <code>0x</code>). 20 byte terakhir = alamat. <code>slice(-40)</code> ambil 40 karakter terakhir, tambah <code>0x</code> di depan. Karena address EVM case-insensitive, toLowerCase() standarisasi.</p>
+
+<h4>Q: "Kenapa <code>edgesFor</code> mengambil <code>limit + 1</code>?"</h4>
+<pre><code>out.push(...(stmt.all(a, lo, hi, perAddrLimit + 1) as Transfer[]));</code></pre>
+<p>Kita ambil 1 lebih banyak dari batas. Jika hasilnya <code>perAddrLimit + 1</code> baris, berarti ada fan-out melebihi batas. Caller (BFS) bisa deteksi dan set <code>truncated = true</code>. Kalau ambil tepat <code>limit</code>, kita tidak tahu apakah masih ada data di belakangnya.</p>
+
+<h4>Q: "Apa bedanya <code>INSERT OR REPLACE</code> vs <code>INSERT OR IGNORE</code> di SQLite?"</h4>
+<ul>
+  <li><code>INSERT OR REPLACE</code>: Jika ada row dengan PRIMARY KEY/UNIQUE yang sama, HAPUS yang lama, INSERT yang baru. Dipakai untuk <code>blocks</code> karena hash bisa berubah (reorg).</li>
+  <li><code>INSERT OR IGNORE</code>: Jika ada yang sama, DIAM saja. Dipakai untuk <code>transfers</code> dan <code>addresses</code> karena data yang sama = tidak perlu diupdate.</li>
+</ul>
+
+<h4>Q: "Bagaimana <code>withRetry</code> memutuskan kapan berhenti retry?"</h4>
+<p>6 percobaan. Jika semua gagal, throw error terakhir. Tapi <code>isRangeTooLarge</code> error langsung di-throw tanpa retry — karena itu bukan error sementara, tapi batasan provider. Jadi kita handle dengan span halving, bukan retry.</p>
+
+<h4>Q: "Apa yang dimaksud <code>UNIQUE (tx_hash, log_index)</code> di tabel transfers?"</h4>
+<p>Satu transaksi bisa punya banyak transfer (fan-out). Tapi setiap transfer unik dari kombinasi tx hash + log index. Untuk ETH native, log index = -1 (hanya 1 per tx). Untuk ERC-20, setiap event punya log index berbeda. Ini mencegah duplikasi jika ingest dijalankan 2x.</p>
+
+<!-- ========================================== -->
+<!-- 6.2 PERTANYAAN BLOCKCHAIN DASAR -->
+<!-- ========================================== -->
+<h3 id="blockchain-basics">6.2 Blockchain Basics — Pastikan Paham Konsep</h3>
+
+<h4>Q: "Apa itu Sepolia?"</h4>
+<p>Ethereum testnet. Dipakai untuk development/testing tanpa pakai uang sungguhan. Chain ID 11155111. Transaksi di sini tidak punya nilai moneter nyata.</p>
+
+<h4>Q: "Apa bedanya EOA dan Contract?"</h4>
+<ul>
+  <li><strong>EOA (Externally Owned Account)</strong>: Punya private key, bisa initiate transaksi. Mulai dari <code>0x</code> + 40 hex.</li>
+  <li><strong>Contract</strong>: Punya kode yang dijalankan di EVM. Tidak punya private key. Dideploy lewat transaksi dengan <code>to = null</code>.</li>
+</ul>
+<p>Di sistem ini, kita klasifikasi via <code>eth_getCode</code>: jika code = <code>'0x'</code> → EOA, selain itu → contract.</p>
+
+<h4>Q: "Apa itu ERC-20?"</h4>
+<p>Standar token di Ethereum. Contoh: USDC, DAI, WETH. Setiap transfer memancarkan event <code>Transfer(address from, address to, uint256 amount)</code>. Event ini bisa dibaca dari logs transaksi. Kita filter pakai topic signature <code>0xddf252ad...</code>.</p>
+
+<h4>Q: "Apa itu reorg?"</h4>
+<p>Ketika node menemukan chain yang lebih panjang dari yang tersimpan, dia replace beberapa block terakhir. Block yang di-replace jadi orphan. Di Sepolia reorg jarang tapi mungkin. Sistem kita deteksi via <code>parentHash</code> yang tidak cocok.</p>
+
+<h4>Q: "Apa itu <code>eth_getLogs</code>?"</h4>
+<p>RPC method untuk query events (logs) dari blockchain. Kita pakai untuk ambil event Transfer ERC-20. Bisa filter berdasarkan block range dan topic. Public endpoint sering batasi range (misal max 2000 block). Makanya kita pakai chunk adaptif.</p>
+
+<h4>Q: "Apa bedanya <code>value</code> dan <code>data</code> di transaksi?"</h4>
+<ul>
+  <li><code>value</code>: Jumlah ETH yang ditransfer (dalam wei). Hanya relevan untuk native ETH transfer.</li>
+  <li><code>data</code>: Payload ke smart contract. Untuk ERC-20 transfer, berisi encoded function call. Untuk event, <code>data</code> berisi parameter yang tidak di-index (amount).</li>
+</ul>
+
+<h4>Q: "Kenapa ada yang namanya 'hop'?"</h4>
+<p>Hop = jarak dalam rantai transfer. Jika A kirim ke B, lalu B kirim ke C, itu 2 hop dari A ke C. Sistem kita trace sampai depth tertentu (default 3 hop). Ini penting untuk melihat alur uang yang berpindah tangan beberapa kali.</p>
+
+<!-- ========================================== -->
+<!-- 6.3 PERTANYAAN TYPESCRIPT & NODE.JS -->
+<!-- ========================================== -->
+<h3 id="ts-node-q">6.3 TypeScript & Node.js</h3>
+
+<h4>Q: "Kenapa pakai <code>node:sqlite</code> bukan library seperti <code>better-sqlite3</code>?"</h4>
+<p>Node 22+ sudah punya SQLite built-in via experimental API. Keuntungan: zero dependency, tidak perlu native build step. Trade-off: API-nya masih experimental, bisa berubah. Tapi untuk project ini cukup.</p>
+
+<h4>Q: "Apa itu <code>DatabaseSync</code> di <code>node:sqlite</code>?"</h4>
+<p>SQLite synchronous API di Node. Semua operasi DB jalan synchronously (tidak perlu await). Ini oke karena SQLite single-writer — tidak ada concurrent write yang perlu di-handle. Lebih simpel dari async API.</p>
+
+<h4>Q: "Kenapa pakai <code>tsx</code> bukan <code>ts-node</code>?"</h4>
+<p><code>tsx</code> lebih cepat, tidak butuh <code>tsconfig.json</code> yang kompleks, dan support ES modules dengan baik. <code>ts-node</code> lebih tua, sering punya issue dengan <code>"type": "module"</code> di package.json.</p>
+
+<h4>Q: "Apa itu WAL mode di SQLite?"</h4>
+<p>Write-Ahead Logging. Mode di mana write tidak langsung lock database. Reader bisa baca sementara writer menulis. Cocok untuk我们的 use case: API (reader) jalan bersama ingester (writer). Tanpa WAL, ada lock contention.</p>
+
+<h4>Q: "Kenapa <code>bigint</code> tidak langsung disimpan ke SQLite?"</h4>
+<p>SQLite tidak punya tipe BigInt. <code>node:sqlite</code> juga tidak support BigInt langsung. Jadi kita konversi ke string: <code>value.toString()</code>. Untuk query, baca sebagai string lalu <code>BigInt()</code> jika perlu.</p>
+
+<!-- ========================================== -->
+<!-- 6.4 PERTANYAAN SCENARIO / DEBUGGING -->
+<!-- ========================================== -->
+<h3 id="scenario-q">6.4 Scenario & Debugging</h3>
+
+<h4>Q: "User bilang hasil trace-nya kosong untuk tx yang jelas ada. Apa yang kamu cek?"</h4>
+<ol>
+  <li>Cek apakah tx ada di window: <code>curl localhost:3000/health</code> — lihat window berapa</li>
+  <li>Cek apakah tx punya transfer: query langsung ke DB atau pakai <code>transfersByTx</code></li>
+  <li>Cek apakah tx di luar window (block <code>&lt; 11672000</code> atau <code>&gt; 11673999</code>)</li>
+  <li>Cek apakah tx tidak punya value transfer (hanya contract interaction tanpa ETH)</li>
+  <li>Cek apakah direction salah (user minta <code>down</code> tapi transfer masuk ke tx)</li>
+</ol>
+
+<h4>Q: "Ingest tiba-tiba lambat sekali. Diagnosa?"</h4>
+<ol>
+  <li>Cek log: apakah ada "getLogs span too large" berulang? Berarti provider rate-limit</li>
+  <li>Cek apakah chunk size sudah turun ke 10 (minimum)</li>
+  <li>Cek apakah RPC endpoint berubah (public endpoint sering throttled)</li>
+  <li>Coba ganti <code>SEPOLIA_RPC_URL</code> ke Alchemy/Infura</li>
+  <li>Cek network: mungkin ada masalah koneksi</li>
+</ol>
+
+<h4>Q: "Sistem bilang 'reorg detected' tapi kita tahu tidak ada reorg. Kenapa?"</h4>
+<p>Kemungkinan: RPC endpoint mengembalikan block yang sedikit berbeda (misal timestamp berbeda, atau ada fork minor). Atau: kita mengambil block dari RPC yang berbeda di fetch yang berbeda, dan ada perbedaan antara mereka. Solusi: pastikan konsisten pakai 1 RPC endpoint.</p>
+
+<h4>Q: "Bagaimana jika ada 2 transaksi di block yang sama, dari alamat yang sama, ke tujuan yang sama?"</h4>
+<p>Bedanya di <code>txIndex</code> dan <code>logIndex</code>. Sistem mengurutkan berdasarkan <code>(block, txIndex, logIndex)</code>. Jadi meskipun from/to sama, mereka dianggap edge terpisah dengan urutan chronologis yang benar.</p>
+
+<h4>Q: "Apa yang terjadi jika trace mencapai batas <code>maxNodes</code>?"</h4>
+<p>Stop expansion. Return hasil parsial dengan <code>truncated: true</code> dan <code>truncatedAt</code> berisi alamat yang sedang di-explore. Sistem tidak pernah salah — hanya tidak lengkap. Client bisa tahu ada data lebih banyak.</p>
+
+<h4>Q: "Bagaimana jika alamat A mengirim ke B, lalu B langsung kirim ke A (dalam tx yang sama)?"</h4>
+<p>Karena seed berada di hop 0, A dan B sudah visited. Saat BFS mencoba expand B → A, A sudah ada di <code>visited</code> → skip. Siklus berhenti. Tapi edge B→A tetap ada di hasil (sebagai hop 1) karena edge ditambahkan sebelum cek visited.</p>
+
+<!-- ========================================== -->
+<!-- 6.5 PERTANYAAN DESIGN DECISION -->
+<!-- ========================================== -->
+<h3 id="design-q">6.5 Design Decisions — Kenapa Bukan Yang Lain</h3>
+
+<h4>Q: "Kenapa tidak pakai graph database seperti Neo4j?"</h4>
+<p>Transfer graph cukup simpel: alamat → edge. BFS query natural dengan SQL index yang sudah ada. SQLite zero deployment. Neo4j overkill untuk use case ini. Kalau butuh complex graph traversal (centrality, community detection), baru Neo4j masuk akal.</p>
+
+<h4>Q: "Kenapa tidak pakai Postgres langsung?"</h4>
+<p>Assment bilang "justify your data model". SQLite paling sederhana untuk demo. Tidak butuh install service, tidak butuh config. Single file, langsung jalan. Kalau untuk production multi-user, baru Postgres.</p>
+
+<h4>Q: "Kenapa tidak pakai Redis untuk caching?"</h4>
+<p>Tidak ada di requirement. Sistem ini single-user, trace on-demand. Cache berguna jika ada banyak user query yang sama berulang kali. Tapi untuk demo, SQLite sudah cukup cepat.</p>
+
+<h4>Q: "Kenapa <code>node:http</code> bukan Express/Fastify?"</h4>
+<p>Hanya 1 runtime dependency (viem). <code>node:http</code> cukup untuk 4 route. Tidak perlu middleware, routing library, atau framework. Lebih simpel, lebih sedikit yang bisa rusak.</p>
+
+<h4>Q: "Kenapa <code>from</code> dan <code>to</code> di-lowercase?"</h4>
+<p>EVM address case-insensitive. <code>0xABC</code> = <code>0xabc</code>. Jika tidak standarisasi, bisa dianggap alamat berbeda. <code>0xABC...xyz</code> dan <code>0xabc...xyz</code> seharusnya 1 alamat yang sama. Lowercase menjamin konsistensi.</p>
+
+<h4>Q: "Bagaimana jika saya ingin trace transfer yang melibatkan 500 alamat?"</h4>
+<p><code>maxNodes</code> default 500, <code>maxEdgesPerNode</code> default 200. Jika fan-out besar, <code>truncated = true</code>. Bisa naikkan limit: <code>?maxNodes=5000&maxEdgesPerNode=1000</code> (maks server). Tapi hati-hati: bisa lambat dan besar response-nya.</p>
+
+<!-- ========================================== -->
+<!-- 6.6 PERTANYAAN LIVE REQUIREMENT -->
+<!-- ========================================== -->
+<h3 id="live-req">6.6 Requirement Live — "Kamu Ditanya di Interview"</h3>
+
+<div class="warning">
+  Interviewer akan kasih requirement baru secara live. Kamu harus bisa adaptasi.
+</div>
+
+<h4>Skenario 1: "Tambahkan support ERC-721"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li>Ubah <code>extractTransfers</code>: ganti <code>topics.length !== 3</code> jadi handle 4 topics</li>
+  <li>Tambah field <code>tokenId</code> di tabel transfers (opsional)</li>
+  <li>Topic signature ERC-721 Transfer: <code>0xc3d58168c5ae739773230a9565e6a7eb375c4430...</code></li>
+  <li>Schema tetap sama, hanya filter yang berubah</li>
+</ol>
+
+<h4>Skenario 2: "Tambahkan real-time notification saat ada transfer"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li>Subscribe ke <code>eth_subscribe('newHeads')</code> atau <code>eth_subscribe('logs')</code></li>
+  <li>Filter topic <code>Transfer</code> secara real-time</li>
+  <li>Setiap kali ada match → trigger notification (WebSocket, email, dll)</li>
+  <li>Tidak perlu ubah schema, hanya tambah listener di sisi ingestion</li>
+</ol>
+
+<h4>Skenario 3: "Bagaimana jika ada 1 juta transfer di 1 block?"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li>Chunk size otomatis turun karena <code>getLogs</code> akan error</li>
+  <li>Transfer diekstraksi per-block, jadi 1 block = 1 write transaction</li>
+  <li>SQLite bisa handle 1 juta INSERT dalam 1 transaksi (beberapa detik)</li>
+  <li>Trace BFS dibatasi <code>maxEdgesPerNode</code>, jadi tidak OOM</li>
+  <li>Response mungkin besar, tambah pagination jika perlu</li>
+</ol>
+
+<h4>Skenario 4: "Tambahkan caching untuk trace yang sama"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li>Cache key: <code>trace:tx:${hash}:${depth}:${direction}</code></li>
+  <li>Value: JSON response</li>
+  <li>TTL: sampai block baru di-ingest (invalidate cache)</li>
+  <li>Bisa pakai in-memory Map (simpel) atau Redis (production)</li>
+  <li>Tapi trade-off: cache invalidation = complexity tambahan</li>
+</ol>
+
+<h4>Skenario 5: "Bagaimana cara verifikasi bahwa trace benar?"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li><code>npm run verify</code> — bandingkan dengan expected output</li>
+  <li>Cross-check dengan block explorer (Etherscan Sepolia)</li>
+  <li>Jalankan trace manual di RPC langsung</li>
+  <li>Test coverage: 22 test yang cover kasus edge</li>
+  <li>Temporal rule: pastikan tidak ada edge yang melanggar urutan waktu</li>
+</ol>
+
+<!-- ========================================== -->
+<!-- 6.7 PERTANYAAN BEHAVIORAL -->
+<!-- ========================================== -->
+<h3 id="behavioral-q">6.7 Pertanyaan Behavioral</h3>
+
+<h4>Q: "Ceritakan tentang challenge terbesar di project ini"</h4>
+<p><strong>Jawaban:</strong> Reorg handling. Blockchain bisa reorganize kapan saja. Saya harus memastikan sistem tidak mengembalikan data yang salah. Solusinya: setiap block cek <code>parentHash</code>, jika tidak cocok → walk backward ke common ancestor, rollback, dan re-ingest. Ini butuh testing yang hati-hati — makanya ada test khusus untuk reorg.</p>
+
+<h4>Q: "Apa yang kamu lakukan saat AI generate kode yang salah?"</h4>
+<p><strong>Jawaban:</strong> Saya baca setiap baris. Jika ada yang tidak masuk akal, saya ubah. Contoh: AI generate retry logic yang tidak handle <code>isRangeTooLarge</code> secara khusus. Saya tambahkan karena error itu bukan transient — retry saja tidak cukup, perlu span halving.</p>
+
+<h4>Q: "Bagaimana kamu memastikan kode kamu benar?"</h4>
+<p><strong>Jawaban:</strong> Tiga lapis: (1) unit test — 22 test yang cover kasus edge, (2) integration test — <code>npm run verify</code> bandingkan dengan live data, (3) manual spot-check — query seed tx dan bandingkan dengan yang diharapkan di README.</p>
+
+<h4>Q: "Jika kamu diberi waktu 1 minggu lagi, apa yang akan kamu tambah?"</h4>
+<p><strong>Jawaban:</strong></p>
+<ol>
+  <li>Internal call tracing (butuh archive node)</li>
+  <li>Rate limiting di API</li>
+  <li>Pagination untuk response besar</li>
+  <li>WebSocket untuk follow mode (real-time updates)</li>
+  <li>Dashboard visualisasi graph</li>
+</ol>
+
+<h4>Q: "Apa yang paling menarik dari project ini?"</h4>
+<p><strong>Jawaban:</strong> Konsep "follow the money" di blockchain. Uang bisa berpindah 5-6 tangan dalam satu tx (via router). Sistem ini bisa visualisasikan alur uang tersebut. Menarik juga karena harus handle data yang bisa berubah (reorg) — beda dari database biasa.</p>
+
+<h4>Q: "Kenapa kamu pilih tech stack ini?"</h4>
+<p><strong>Jawaban:</strong> Assessment minta simpel: Node, SQLite, tanpa Docker. Saya pilih viem karena lebih modern dari ethers.js dan punya Sepolia chain preset. <code>node:http</code> supaya zero framework dependency. Semua pilihan untuk minimize moving parts.</p>
+
+<!-- ========================================== -->
+<!-- 6.8 PERTANYAAN TENTANG ANGKA / DATA -->
+<!-- ========================================== -->
+<h3 id="numbers-q">6.8 Tentang Angka & Data — Harus Hafal</h3>
+
+<table>
+  <tr><th>Pertanyaan</th><th>Jawaban</th></tr>
+  <tr><td>Berapa block yang di-ingest?</td><td>2,000 block (11672000 – 11673999)</td></tr>
+  <tr><td>Berapa total transfer?</td><td>280,051</td></tr>
+  <tr><td>Berapa banyak yang ETH vs ERC-20?</td><td>~65k ETH, ~215k ERC-20</td></tr>
+  <tr><td>Berapa total alamat unik?</td><td>51,725</td></tr>
+  <tr><td>Butuh waktu berapa untuk ingest?</td><td>~520 detik (8.7 menit) pakai Tenderly public</td></tr>
+  <tr><td>Berapa dependency runtime?</td><td>1 (viem)</td></tr>
+  <tr><td>Chain ID Sepolia?</td><td>11155111</td></tr>
+  <tr><td>Default depth trace?</td><td>3 hop</td></tr>
+  <tr><td>Max depth yang diizinkan?</td><td>10 (trace), 12 (hops)</td></tr>
+  <tr><td>Default maxNodes?</td><td>500</td></tr>
+  <tr><td>Default maxEdgesPerNode?</td><td>200</td></tr>
+  <tr><td>Topic signature ERC-20 Transfer?</td><td><code>0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef</code></td></tr>
+  <tr><td>Berapa retry attempts?</td><td>6, dengan backoff 250ms → 8s</td></tr>
+  <tr><td>Poll interval follow mode?</td><td>6 detik</td></tr>
+  <tr><td>Confirmations default?</td><td>6 block</td></tr>
+</table>
+
+<!-- ========================================== -->
+<!-- 6.9 PERTANYAAN TRICKY / GOTCHA -->
+<!-- ========================================== -->
+<h3 id="tricky-q">6.9 Pertanyaan Tricky / Gotcha</h3>
+
+<h4>Q: "Jika A kirim 1 ETH ke B di block 100, lalu B kirim 0.5 ETH ke C di block 99, apakah C ter-trace?"</h4>
+<p><strong>Tidak.</strong> Karena B menerima dana di block 100, tapi transfer B→C terjadi di block 99 (sebelum B punya dana). Aturan temporal per-hop menolak edge ini. C tidak akan muncul di downstream trace dari A.</p>
+
+<h4>Q: "Bagaimana jika satu tx memiliki 100 transfer ERC-20 dari 100 alamat berbeda?"</h4>
+<p>Semua 100 transfer masuk sebagai seed edges. BFS dimulai dari 100 alamat penerima sekaligus. Ini bisa trigger <code>maxNodes</code> limit. Sistem akan truncate dan beri tahu di <code>truncatedAt</code>.</p>
+
+<h4>Q: "Apa yang terjadi jika <code>eth_getCode</code> untuk alamat tidak ada?"</h4>
+<p>Viem akan return <code>'0x'</code> (empty code). Sistem kita interpret sebagai EOA. Jika RPC error, kita catch dan biarkan <code>isContract</code> tetap <code>null</code>. Tidak fatal — trace tetap jalan.</p>
+
+<h4>Q: "Bisakah trace mengembalikan jumlah hop yang salah?"</h4>
+<p>Tidak, jika aturan temporal diikuti. BFS menjamin shortest path. Tapi <code>hops</code> hanya menghitung directed path. Jika uang mengalir A→B→C tapi tidak ada edge langsung A→C, hops = 2. Jika ada edge A→C langsung, hops = 1 (karena BFS lebih cepat menemukan).</p>
+
+<h4>Q: "Apa yang terjadi jika ingest dijalankan 2x secara bersamaan?"</h4>
+<p>SQLite WAL mode handle concurrent reads, tapi single writer. Jika 2 ingester jalan bareng, yang kedua akan tunggu lock. Tapi karena DELETE-then-INSERT per block, hasil akhirnya sama (idempotent). Tapi tidak efisien — makanya README bilang "run one ingester at a time".</p>
+
+<h4>Q: "Kenapa <code>getLogs</code> pakai topic filter, bukan address filter?"</h4>
+<p>Kita ingin semua Transfer events di semua contract ERC-20, bukan dari 1 contract tertentu. Filter by topic = ambil semua Transfer dari semua token. Filter by address = hanya 1 token. Kita butuh semua.</p>
+
+<!-- ========================================== -->
+<!-- 6.10 DEMO SCRIPT -->
+<!-- ========================================== -->
+<h3 id="demo">6.10 Demo Script — "Jalankan Sistem Kamu"</h3>
+
+<pre><code># 1. Tunjukkan test pass
+npm test
+
+# 2. Tunjukkan status ingest
+npm run verify
+
+# 3. Jalankan API
+npm run dev
+
+# 4. Query seed tx
+curl "localhost:3000/trace/tx/0x4c97c1e24c03bd19fcbb9c4eb2fcadf476caf5730e8621cd18183a0b333550d9?depth=3&direction=down"
+
+# 5. Query health
+curl localhost:3000/health
+
+# 6. Query hops
+curl "localhost:3000/hops?from=0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1&to=0xf3d27499da2e5c8f5b5eb4c4fa23775e5978844e"
+
+# 7. Tunjukkan DB stats
+curl localhost:3000/health | python3 -m json.tool</code></pre>
+
+<div class="success">
+  <strong>Yang ditunjukkan:</strong> Test pass → kode benar. Verify pass → data sesuai. API running → bisa diquery. Response sesuai README → konsisten.
+</div>
+
+<!-- ========================================== -->
+<!-- 6.11 CHEAT SHEET -->
+<!-- ========================================== -->
+<h3 id="cheatsheet">6.11 Cheat Sheet — Angka Penting</h3>
+
+<table>
+  <tr><th>Item</th><th>Nilai</th></tr>
+  <tr><td>Block window</td><td>11672000 – 11673999</td></tr>
+  <tr><td>Total block</td><td>2,000</td></tr>
+  <tr><td>Total transfer</td><td>280,051</td></tr>
+  <tr><td>Total alamat</td><td>51,725</td></tr>
+  <tr><td>Test</td><td>22 (pass 22, fail 0)</td></tr>
+  <tr><td>Route API</td><td>4 (/health, /trace/tx, /trace/address, /hops)</td></tr>
+  <tr><td>Seed query</td><td>7 (3 tx, 2 alamat, 2 hops)</td></tr>
+  <tr><td>Waktu ingest</td><td>~520 detik (Tenderly public)</td></tr>
+  <tr><td>Runtime dependency</td><td>1 (viem)</td></tr>
+  <tr><td>Chain ID</td><td>11155111 (Sepolia)</td></tr>
+  <tr><td>RPC env var</td><td>SEPOLIA_RPC_URL</td></tr>
+  <tr><td>Default depth</td><td>3 hop</td></tr>
+  <tr><td>Max depth</td><td>10 (trace) / 12 (hops)</td></tr>
+  <tr><td>Retry</td><td>6x, 250ms → 8s</td></tr>
+  <tr><td>Follow poll</td><td>6 detik</td></tr>
+  <tr><td>Confirmations</td><td>6 block</td></tr>
+</table>
+
+</body>
+</html>

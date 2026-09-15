@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sepolia Transaction Trace System — Technical Walkthrough</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #d2a8ff;
+      --accent4: #f0883e;
+      --red: #f85149;
+      --code-bg: #1c2128;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 0.5rem;
+      margin-bottom: 2rem;
+      color: var(--accent);
+    }
+    h2 {
+      font-size: 1.5rem;
+      color: var(--accent);
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--accent);
+      padding-left: 0.75rem;
+    }
+    h3 {
+      font-size: 1.2rem;
+      color: var(--accent3);
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    h4 {
+      font-size: 1rem;
+      color: var(--accent4);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p, li { margin-bottom: 0.5rem; }
+    ul, ol { padding-left: 1.5rem; }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: var(--code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: var(--accent2);
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: 0.85em;
+      color: var(--text);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95em;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+    }
+    th {
+      background: var(--surface);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    tr:hover { background: rgba(88, 166, 255, 0.05); }
+    .highlight {
+      background: rgba(88, 166, 255, 0.1);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .warning {
+      background: rgba(240, 136, 62, 0.1);
+      border-left: 3px solid var(--accent4);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .success {
+      background: rgba(63, 185, 80, 0.1);
+      border-left: 3px solid var(--accent2);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .toc-title {
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+    }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .toc a:hover { color: var(--accent); }
+    .qna { margin: 1rem 0; }
+    .question {
+      font-weight: 600;
+      color: var(--accent4);
+      margin-bottom: 0.25rem;
+    }
+    .answer { margin-left: 0; }
+    .tag {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+      margin-right: 0.3em;
+    }
+    .tag-red { background: var(--red); }
+    .tag-green { background: var(--accent2); }
+    .tag-purple { background: var(--accent3); color: var(--bg); }
+    .flow-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.85em;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Detailed Technical Walkthrough — Sepolia Transaction Trace System</h1>
+
+<div class="toc">
+  <div class="toc-title">Table of Contents</div>
+  <ul>
+    <li><a href="#structure">1. Project Structure</a></li>
+    <li><a href="#files">2. File-by-File Breakdown</a></li>
+    <li><a href="#tests">3. Test Suites</a></li>
+    <li><a href="#dataflow">4. Data Flow</a></li>
+    <li><a href="#decisions">5. Key Design Decisions</a></li>
+    <li><a href="#interview">6. Interview Preparation</a>
+      <ul>
+        <li><a href="#code-walkthrough">6.1 Code Walkthrough</a></li>
+        <li><a href="#system-design-q">6.2 System Design Questions</a></li>
+        <li><a href="#algorithm-q">6.3 Algorithm Questions</a></li>
+        <li><a href="#live-req">6.4 Live Requirement</a></li>
+        <li><a href="#behavioral-q">6.5 Behavioral Questions</a></li>
+        <li><a href="#demo">6.6 Demo Script</a></li>
+        <li><a href="#cheatsheet">6.7 Cheat Sheet</a></li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- ==================== SECTION 1 ==================== -->
+<h2 id="structure">1. Project Structure</h2>
+
+<div class="flow-box">sepolia-trace/
+├── .env.example              # RPC endpoint template
+├── .env                      # Live config (gitignored)
+├── package.json              # Dependencies, scripts, engine constraint
+├── tsconfig.json             # TypeScript config
+├── src/
+│   ├── config.ts             # Environment variable parsing
+│   ├── rpc.ts                # Viem client, retry logic, ChainReader interface
+│   ├── db.ts                 # SQLite schema, CRUD operations
+│   ├── ingest.ts             # Block ingestion, reorg handling, transfer extraction
+│   ├── trace.ts              # BFS trace algorithm, shortest hops
+│   ├── server.ts             # HTTP API server
+│   └── cli.ts                # CLI commands (ingest, verify, find-seeds)
+├── test/
+│   ├── trace.test.ts         # 16 trace algorithm tests
+│   └── ingest.test.ts        # 6 ingestion edge case tests
+└── docs/
+    ├── system-design.md      # Architecture document
+    ├── contribution-attribution.md
+    ├── chat-artifact.md
+    └── expected/             # Seed query expected outputs
+        ├── seeds.json        # Manifest of all 7 seed queries
+        ├── tx1.json, tx2.json, tx3.json
+        ├── addr1.json, addr2.json
+        └── hops1.json, hops2.json</div>
+
+<!-- ==================== SECTION 2 ==================== -->
+<h2 id="files">2. File-by-File Breakdown</h2>
+
+<!-- package.json -->
+<h3><code>package.json</code></h3>
+<pre><code>{
+  "engines": { "node": ">=22.5" },       // node:sqlite needs 22+
+  "dependencies": { "viem": "^2.21.0" }, // Only runtime dependency
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",                     // TS execution, no build step
+    "typescript": "^5.6.0"
+  }
+}</code></pre>
+
+<p><strong>Key scripts:</strong></p>
+<ul>
+  <li><code>npm test</code> — built-in test runner via <code>node --import tsx --test</code></li>
+  <li><code>npm run ingest</code> — CLI with env file loaded</li>
+  <li><code>npm run dev</code> — API server on port 3000</li>
+  <li><code>npm run verify</code> — re-runs seeds and diffs against expected JSON</li>
+  <li><code>npm run typecheck</code> — <code>tsc --noEmit</code></li>
+</ul>
+
+<hr>
+
+<!-- config.ts -->
+<h3><code>src/config.ts</code> <span class="tag">14 lines</span></h3>
+<p><strong>Purpose:</strong> Parse environment variables, fail fast if required vars missing.</p>
+<pre><code>export const SEPOLIA_CHAIN_ID = 11155111;
+
+function required(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var ${name}`);
+  return v;
+}
+
+export const config = {
+  rpcUrl: () => required('SEPOLIA_RPC_URL'),  // Lazy eval
+  dbPath: process.env.DB_PATH ?? 'data/trace.db',
+  port: Number(process.env.PORT ?? 3000),
+  confirmations: Number(process.env.CONFIRMATIONS ?? 6),
+};</code></pre>
+
+<div class="highlight">
+  <strong>Why lazy <code>rpcUrl()</code>?</strong> Tests don't need an RPC URL. Making it a function means the error only fires when the CLI actually tries to connect.
+</div>
+
+<hr>
+
+<!-- rpc.ts -->
+<h3><code>src/rpc.ts</code> <span class="tag">115 lines</span></h3>
+<p><strong>Purpose:</strong> Abstraction over Ethereum JSON-RPC via <code>viem</code>. Defines the <code>ChainReader</code> interface that tests can mock.</p>
+
+<h4>Key types</h4>
+<pre><code>export type RpcBlock = {
+  number: number;
+  hash: string;
+  parentHash: string;
+  timestamp: number;
+  transactions: { hash: string; transactionIndex: number; from: string; to: string | null; value: bigint }[];
+};
+
+export type RpcLog = {
+  address: string;
+  topics: string[];
+  data: string;
+  blockNumber: number;
+  transactionHash: string;
+  transactionIndex: number;
+  logIndex: number;
+};
+
+export interface ChainReader {
+  blockNumber(): Promise&lt;number&gt;;
+  getBlock(n: number): Promise&lt;RpcBlock&gt;;
+  getTransferLogs(from: number, to: number): Promise&lt;RpcLog[]&gt;;
+  getCode(address: string): Promise&lt;string&gt;;
+}</code></pre>
+
+<h4><code>withRetry</code></h4>
+<ul>
+  <li>Retries with exponential backoff: 250ms → 500ms → 1s → 2s → 4s → 8s</li>
+  <li>Random jitter (0-100ms) to avoid thundering herd</li>
+  <li>Does NOT retry <code>isRangeTooLarge</code> — those trigger span halving instead</li>
+</ul>
+
+<h4><code>isRangeTooLarge</code></h4>
+<p>Pattern-matches error messages from various providers. Checks for: "more than", "too many", "range too large", "block range", "exceed", "limited to", "timeout".</p>
+
+<h4><code>assertSepolia</code></h4>
+<p>Calls <code>eth_chainId</code> and throws if not 11155111. Run at the start of every ingest command.</p>
+
+<h4>Transfer topic constant</h4>
+<pre><code>export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';</code></pre>
+<p>ERC-20 <code>Transfer(address,address,uint256)</code> event signature.</p>
+
+<hr>
+
+<!-- db.ts -->
+<h3><code>src/db.ts</code> <span class="tag">191 lines</span></h3>
+<p><strong>Purpose:</strong> SQLite schema, prepared statements, all database operations.</p>
+
+<h4>Schema (4 tables)</h4>
+<pre><code>-- Block headers. parentHash is critical for reorg detection.
+blocks (
+  number      INTEGER PRIMARY KEY,
+  hash        TEXT NOT NULL,
+  parent_hash TEXT NOT NULL,
+  timestamp   INTEGER NOT NULL
+)
+
+-- Transfer edges. Each ETH transfer or ERC-20 event = one row.
+transfers (
+  id           INTEGER PRIMARY KEY,
+  tx_hash      TEXT NOT NULL,
+  block_number INTEGER NOT NULL REFERENCES blocks(number) ON DELETE CASCADE,
+  tx_index     INTEGER NOT NULL,
+  log_index    INTEGER NOT NULL,   -- -1 = native ETH, >=0 = ERC-20 event
+  from_addr    TEXT NOT NULL,
+  to_addr      TEXT NOT NULL,
+  asset        TEXT NOT NULL,      -- "ETH" or ERC-20 contract address
+  amount       TEXT NOT NULL,      -- decimal string (uint256)
+  UNIQUE (tx_hash, log_index)
+)
+
+-- Address cache. is_contract resolved lazily via eth_getCode.
+addresses (
+  address     TEXT PRIMARY KEY,
+  is_contract INTEGER,             -- NULL = unknown, 0 = EOA, 1 = contract
+  first_seen  INTEGER NOT NULL
+)
+
+-- Ingestion cursor. Single row, tracks highest committed block.
+cursor (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  last_block INTEGER NOT NULL
+)</code></pre>
+
+<h4>Indexes</h4>
+<pre><code>ix_transfers_from ON transfers(from_addr, block_number)
+ix_transfers_to   ON transfers(to_addr,   block_number)
+ix_transfers_tx   ON transfers(tx_hash)</code></pre>
+<ul>
+  <li><code>from_addr + block_number</code>: trace BFS queries "all outgoing from X in range"</li>
+  <li><code>to_addr + block_number</code>: same for incoming (upstream)</li>
+  <li><code>tx_hash</code>: <code>transfersByTx()</code> lookup for seed tx</li>
+</ul>
+
+<h4>Key methods</h4>
+<table>
+  <tr><th>Method</th><th>What it does</th></tr>
+  <tr><td><code>writeBlock(block, transfers)</code></td><td>DELETE → INSERT block + transfers + cursor — one SQLite transaction</td></tr>
+  <tr><td><code>rollbackFrom(n)</code></td><td><code>DELETE FROM blocks WHERE number >= n</code> (cascades)</td></tr>
+  <tr><td><code>getCursor()</code></td><td>Highest committed block number</td></tr>
+  <tr><td><code>window()</code></td><td><code>[MIN(number), MAX(number)]</code></td></tr>
+  <tr><td><code>transfersByTx(txHash)</code></td><td>All transfers for a tx, ordered by log_index</td></tr>
+  <tr><td><code>edgesFor(side, addrs, lo, hi, limit)</code></td><td>Union of outgoing/incoming transfers in block range</td></tr>
+  <tr><td><code>isContract(addr)</code></td><td>Check cache, return <code>null</code> if unknown</td></tr>
+  <tr><td><code>setIsContract(addr, val)</code></td><td>Upsert into addresses table</td></tr>
+  <tr><td><code>counts()</code></td><td><code>{ blocks, transfers, addresses }</code></td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Why DELETE-then-INSERT?</strong> Idempotency. Re-running same range converges to identical rows.
+  <br><strong>Why WAL mode?</strong> Concurrent reads (API) while ingester writes.
+</div>
+
+<hr>
+
+<!-- ingest.ts -->
+<h3><code>src/ingest.ts</code> <span class="tag">181 lines</span></h3>
+<p><strong>Purpose:</strong> Pull blocks from RPC, extract transfers, write to SQLite. Handle reorgs, retries, provider limits.</p>
+
+<h4><code>ingestRange</code> flow</h4>
+<ol>
+  <li>Start with chunk size (default 200), clamped to [10, 2000]</li>
+  <li>For each chunk:
+    <ul>
+      <li><code>rpc.getTransferLogs(n, end)</code> — ERC-20 Transfer events</li>
+      <li>If "too many results" → halve chunk, retry</li>
+      <li><code>rpc.getBlock(b)</code> for each block (parallelized, concurrency=8)</li>
+      <li>Check <code>parentHash</code> → detect reorg</li>
+      <li>If reorg: find common ancestor, rollback, restart</li>
+      <li>Otherwise: <code>extractTransfers()</code> → <code>db.writeBlock()</code></li>
+    </ul>
+  </li>
+  <li>Log progress, double chunk size (up to ceiling)</li>
+</ol>
+
+<h4><code>extractTransfers</code></h4>
+<p>Two sources of transfers:</p>
+<ol>
+  <li><strong>Native ETH:</strong> <code>tx.value > 0n &amp;&amp; tx.to !== null</code> → <code>logIndex: -1</code>, <code>asset: 'ETH'</code></li>
+  <li><strong>ERC-20:</strong> <code>topics.length === 3 &amp;&amp; data.length === 66</code> → extract from/to from topics, amount from data
+    <ul>
+      <li>Filters out: 4-topic (ERC-721), short data (not uint256)</li>
+    </ul>
+  </li>
+</ol>
+
+<h4>Reorg handling</h4>
+<p>Walk backward comparing stored hash to live hash. First match = common ancestor. Delete everything above, re-ingest.</p>
+
+<h4><code>verifyTail</code></h4>
+<p>For follow mode: check last 12 stored blocks each poll. If hash mismatch → rollback.</p>
+
+<hr>
+
+<!-- trace.ts -->
+<h3><code>src/trace.ts</code> <span class="tag">213 lines</span></h3>
+<p><strong>Purpose:</strong> BFS trace algorithm and shortest hops. Core of the system.</p>
+
+<h4>Types</h4>
+<pre><code>type TraceOptions = {
+  depth?: number;           // max hops (default 3)
+  direction?: 'down' | 'up' | 'both';
+  maxNodes?: number;        // default 500
+  maxEdgesPerNode?: number; // default 200
+  fromBlock?: number;
+  toBlock?: number;
+};
+
+type TraceResult = {
+  seed: { type: 'tx' | 'address'; value: string };
+  window: [number, number];
+  nodes: TraceNode[];       // { address, hop, isContract }
+  edges: TraceEdge[];       // Transfer + { hop, direction }
+  truncated: boolean;
+  truncatedAt: string[];
+};</code></pre>
+
+<h4><code>traceTx</code></h4>
+<ol>
+  <li>Load seed edges via <code>db.transfersByTx(txHash)</code></li>
+  <li>Set seed position: <code>(block, txIndex, -1)</code></li>
+  <li>BFS downstream from recipients</li>
+  <li>BFS upstream from senders</li>
+  <li><code>finish()</code>: build nodes, dedup edges</li>
+</ol>
+
+<h4>Temporal rule</h4>
+<pre><code>const after = (e: Transfer, p: Pos) => cmp(e, p) > 0;
+const before = (e: Transfer, p: Pos) => cmp(e, p) < 0;
+const cmp = (e: Transfer, p: Pos) =>
+  e.blockNumber - p.block || e.txIndex - p.txIndex || e.logIndex - p.logIndex;</code></pre>
+<p>Compares <code>(block, txIndex, logIndex)</code> tuples. Downstream must be strictly after; upstream strictly before.</p>
+
+<h4>Cycle termination</h4>
+<p>Each address visited once at shortest hop. BFS guarantees first visit = shortest.</p>
+
+<h4>Fan-out cap</h4>
+<pre><code>if (edges.length > o.maxEdgesPerNode) {
+  edges = edges.slice(0, o.maxEdgesPerNode);
+  res.truncated = true;
+  res.truncatedAt.push(addr);
+}</code></pre>
+
+<hr>
+
+<!-- server.ts -->
+<h3><code>src/server.ts</code> <span class="tag">122 lines</span></h3>
+<p><strong>Purpose:</strong> HTTP API server using <code>node:http</code>.</p>
+
+<table>
+  <tr><th>Route</th><th>Handler</th><th>Parameters</th></tr>
+  <tr><td><code>GET /health</code></td><td>System status</td><td>none</td></tr>
+  <tr><td><code>GET /trace/tx/:hash</code></td><td>Transaction trace</td><td><code>depth</code>, <code>direction</code>, <code>maxNodes</code>, <code>maxEdgesPerNode</code>, <code>fromBlock</code>, <code>toBlock</code></td></tr>
+  <tr><td><code>GET /trace/address/:addr</code></td><td>Address trace</td><td>same as above</td></tr>
+  <tr><td><code>GET /hops?from=&amp;to=</code></td><td>Shortest path</td><td><code>maxDepth</code>, <code>undirected</code>, same opts</td></tr>
+</table>
+
+<h4>Validation</h4>
+<ul>
+  <li>Hash: <code>/^0x[0-9a-f]{64}$/i</code></li>
+  <li>Address: <code>/^0x[0-9a-f]{40}$/i</code></li>
+  <li>Direction: must be <code>down|up|both</code></li>
+  <li>Limits: <code>depth ≤ 10</code>, <code>maxNodes ≤ 5000</code>, <code>maxEdgesPerNode ≤ 1000</code>, <code>maxDepth ≤ 12</code></li>
+</ul>
+
+<h4>Contract classification</h4>
+<p>After trace, check nodes with <code>isContract === null</code>. Up to 50 per query via <code>eth_getCode</code>. Cache in <code>addresses</code> table.</p>
+
+<hr>
+
+<!-- cli.ts -->
+<h3><code>src/cli.ts</code> <span class="tag">148 lines</span></h3>
+<p><strong>Purpose:</strong> CLI entry point for ingest, verify, and find-seeds commands.</p>
+
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td><code>npm run ingest -- --from A --to B</code></td><td>Validates range, checks cursor for resume, calls <code>ingestRange()</code></td></tr>
+  <tr><td><code>npm run ingest -- --follow [--from A]</code></td><td>SIGINT handler, calls <code>follow()</code></td></tr>
+  <tr><td><code>npm run verify</code></td><td>Reads <code>seeds.json</code>, runs each query, diffs against expected</td></tr>
+  <tr><td><code>npm run find-seeds</code></td><td>Scans 20k ETH transfers, finds txs/addresses with ≥ 3 hops</td></tr>
+</table>
+
+<!-- ==================== SECTION 3 ==================== -->
+<h2 id="tests">3. Test Suites</h2>
+
+<h3><code>test/trace.test.ts</code> <span class="tag tag-green">16 tests</span></h3>
+<p>Test helpers create in-memory DBs with compact edge notation:</p>
+<pre><code>function addr(c: string) { return '0x' + c.repeat(40); }
+function tx(n: number) { return '0x' + n.toString(16).padStart(64, '0'); }
+function graph(edges: [number, number, string, string, string?][]): Db</code></pre>
+
+<table>
+  <tr><th>Test</th><th>What it verifies</th></tr>
+  <tr><td>downstream follows chain</td><td>A→B→C→D→E, depth=3 → hop 0-3</td></tr>
+  <tr><td>depth limits walk</td><td>depth=1 → only A, B, C</td></tr>
+  <tr><td>temporal filter</td><td>Downstream excludes pre-seed; upstream excludes post-seed</td></tr>
+  <tr><td>same block txIndex</td><td>Two txs in same block ordered by txIndex</td></tr>
+  <tr><td>cycles terminate</td><td>A→B→C→A → A stays at hop 0, 3 nodes total</td></tr>
+  <tr><td>fan-out cap</td><td>HUB with 30 edges, limit=5 → truncated=true</td></tr>
+  <tr><td>maxNodes</td><td>maxNodes=3 limits visited addresses</td></tr>
+  <tr><td>window restricts</td><td>toBlock=11 hides block 12+ edges</td></tr>
+  <tr><td>unknown tx</td><td>Returns undefined</td></tr>
+  <tr><td>address both directions</td><td>From B: reaches C (down), A & F (up)</td></tr>
+  <tr><td>ETH + ERC-20 preserved</td><td>Both asset types in result</td></tr>
+  <tr><td>hops shortest path</td><td>A→B→C→D + A→D direct → shortest is 1</td></tr>
+  <tr><td>hops direction</td><td>E→A unreachable, undirected finds path</td></tr>
+  <tr><td>hops maxDepth</td><td>maxDepth=2 can't reach E</td></tr>
+  <tr><td>per-hop temporal</td><td>C→D predates C's funds → excluded</td></tr>
+  <tr><td>earliest arrival</td><td>Two paths to C at hop 1, earlier wins</td></tr>
+</table>
+
+<h3><code>test/ingest.test.ts</code> <span class="tag tag-green">6 tests</span></h3>
+
+<p><strong><code>FakeChain</code> mock:</strong></p>
+<pre><code>class FakeChain implements ChainReader {
+  calls = { getBlock: 0, getLogs: 0 };
+  failLogsOnce = false;
+  forkFrom = Infinity;  // simulate reorg at this block
+  fork = '';            // suffix for forked hashes
+  head = 100;
+}</code></pre>
+
+<table>
+  <tr><th>Test</th><th>What it verifies</th></tr>
+  <tr><td>extractTransfers</td><td>ETH included, zero-value excluded, contract creation excluded, ERC-20 included, ERC-721 excluded</td></tr>
+  <tr><td>idempotent</td><td>Ingest twice → same counts</td></tr>
+  <tr><td>reorg rollback</td><td>Fork at 16 → rollback, old txs removed, new txs present</td></tr>
+  <tr><td>verifyTail</td><td>Late reorg detected, rolled back</td></tr>
+  <tr><td>getLogs halving</td><td>Span halves from 100 to 50 on error</td></tr>
+  <tr><td>resumable cursor</td><td>Fail at block 30 → cursor at last chunk, resume works</td></tr>
+</table>
+
+<!-- ==================== SECTION 4 ==================== -->
+<h2 id="dataflow">4. Data Flow</h2>
+
+<h3>Ingestion Flow</h3>
+<div class="flow-box">CLI (cli.ts)
+  → assertSepolia()          // verify chain ID
+  → createChainReader()      // viem client
+  → ingestRange()            // (ingest.ts)
+    → for each chunk:
+        rpc.getTransferLogs()  // ERC-20 events
+        rpc.getBlock() × N     // block headers + txs
+        for each block:
+          check parentHash     // reorg detection
+          extractTransfers()
+          db.writeBlock()
+    → update cursor</div>
+
+<h3>Trace Query Flow</h3>
+<div class="flow-box">HTTP request (server.ts)
+  → route()                    // parse URL + params
+  → traceTx(db, hash, opts)    // (trace.ts)
+    → db.transfersByTx()       // seed edges
+    → bfs(db, ..., 'down')     // downstream BFS
+    → bfs(db, ..., 'up')       // upstream BFS
+    → finish()                 // build nodes, dedup edges
+  → classify(db, rpc, result)  // eth_getCode for unknowns
+  → JSON response</div>
+
+<h3>Hops Query Flow</h3>
+<div class="flow-box">HTTP request (server.ts)
+  → route()
+  → hops(db, from, to, opts)  // (trace.ts)
+    → BFS from source
+    → expand neighbors each hop
+    → check temporal rule
+    → return when destination reached or maxDepth hit
+  → JSON response</div>
+
+<!-- ==================== SECTION 5 ==================== -->
+<h2 id="decisions">5. Key Design Decisions</h2>
+
+<div class="qna">
+  <div class="question">Why SQLite over Postgres?</div>
+  <div class="answer">Zero infrastructure — single file, comes with Node. Sufficient for single-user trace tool. WAL mode handles concurrent reads + single writer.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Why transfer-only edges?</div>
+  <div class="answer">Covers ETH + ERC-20 (the two required types). Internal calls would need <code>debug_traceTransaction</code> which public endpoints don't expose.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Why BFS not DFS?</div>
+  <div class="answer">BFS guarantees shortest hop first. Each address visited once. Cycles terminate naturally.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Why DELETE-then-INSERT per block?</div>
+  <div class="answer">Idempotency. Re-running same range converges to identical rows. Block granularity = fast rollback on reorg.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Why lazy contract classification?</div>
+  <div class="answer">Most addresses never appear in trace queries. Lazy = only classify when queried. Cache in <code>addresses</code> table.</div>
+</div>
+
+<div class="qna">
+  <div class="question">Why <code>log_index = -1</code> for native ETH?</div>
+  <div class="answer">ETH transfers don't have a log index. Using -1 keeps <code>UNIQUE (tx_hash, log_index)</code> valid and distinguishes ETH from ERC-20.</div>
+</div>
+
+<!-- ==================== SECTION 6 ==================== -->
+<h2 id="interview">6. Interview Preparation</h2>
+
+<div class="warning">
+  Assessment: <em>"In the technical interview we walk through your submission, ask you to explain specific code regardless of who authored it, and add a new requirement live. Be ready to run your system."</em>
+</div>
+
+<!-- 6.1 Code Walkthrough -->
+<h3 id="code-walkthrough">6.1 Code Walkthrough</h3>
+
+<h4>Q: "Explain <code>extractTransfers</code> at <code>src/ingest.ts:122</code>"</h4>
+<pre><code>export function extractTransfers(block: RpcBlock, logs: RpcLog[]): Transfer[] {
+  const out: Transfer[] = [];
+  // 1. Native ETH transfers
+  for (const tx of block.transactions) {
+    if (tx.value > 0n && tx.to) {    // skip contract creation (to=null)
+      out.push({
+        txHash: tx.hash,
+        blockNumber: block.number,
+        txIndex: tx.transactionIndex,
+        logIndex: -1,                 // sentinel for native ETH
+        from: tx.from.toLowerCase(),
+        to: tx.to.toLowerCase(),
+        asset: 'ETH',
+        amount: tx.value.toString(),  // bigint → string for precision
+      });
+    }
+  }
+  // 2. ERC-20 Transfer events
+  for (const l of logs) {
+    if (l.topics.length !== 3 || l.data.length !== 66) continue;
+    // topics[0] = event sig, topics[1] = from (indexed), topics[2] = to (indexed)
+    // data = amount (non-indexed, uint256)
+    out.push({
+      txHash: l.transactionHash,
+      blockNumber: l.blockNumber,
+      txIndex: l.transactionIndex,
+      logIndex: l.logIndex,
+      from: topicToAddress(l.topics[1]),
+      to: topicToAddress(l.topics[2]),
+      asset: l.address.toLowerCase(),
+      amount: BigInt(l.data).toString(),
+    });
+  }
+  return out;
+}</code></pre>
+
+<div class="highlight">
+  <strong>Why <code>topics.length !== 3</code>?</strong> ERC-20 has 3 topics; ERC-721 has 4. We filter out ERC-721.<br>
+  <strong>Why <code>data.length !== 66</code>?</strong> <code>0x</code> + 64 hex = 32 bytes = uint256.<br>
+  <strong>Why <code>logIndex = -1</code>?</strong> ETH isn't an event. -1 keeps UNIQUE constraint valid.
+</div>
+
+<h4>Q: "Explain the BFS at <code>src/trace.ts:124</code>"</h4>
+<pre><code>function bfs(db, res, visited, start, dir, o) {
+  const side = dir === 'down' ? 'from' : 'to';
+  let frontier = uniq(start);
+
+  for (let hop = 1; hop <= o.depth && frontier.length > 0; hop++) {
+    const next = new Set&lt;string&gt;();
+    for (const addr of frontier) {
+      const since = visited.get(addr)?.pos;
+      let edges = db.edgesFor(side, [addr], o.window[0], o.window[1], o.maxEdgesPerNode);
+      if (since) edges = edges.filter((e) => (dir === 'down' ? after(e, since) : before(e, since)));
+      if (edges.length > o.maxEdgesPerNode) {
+        edges = edges.slice(0, o.maxEdgesPerNode);
+        res.truncated = true;
+        res.truncatedAt.push(addr);
+      }
+      for (const e of edges) {
+        res.edges.push({ ...e, hop, direction: dir });
+        const other = dir === 'down' ? e.to : e.from;
+        if (!visited.has(other)) {
+          visited.set(other, { hop, pos: posOf(e) });
+          next.add(other);
+        } else if (next.has(other) && seen.pos && ...) {
+          seen.pos = posOf(e);  // earlier arrival at same hop
+        }
+      }
+      if (visited.size >= o.maxNodes) { res.truncated = true; return; }
+    }
+    frontier = [...next];
+  }
+}</code></pre>
+
+<div class="highlight">
+  <strong>Why BFS?</strong> Shortest hop guaranteed. One visit per address. No infinite loops.<br>
+  <strong>Temporal rule per-hop:</strong> Prevents tracing money moved before funds arrived at that address.
+</div>
+
+<h4>Q: "Explain reorg handling at <code>src/ingest.ts:46-68</code>"</h4>
+<pre><code>let reorgAt: number | undefined;
+for (const block of blocks) {
+  const prev = db.getBlock(block.number - 1);
+  if (prev && prev.hash !== block.parentHash) {
+    reorgAt = await findCommonAncestor(db, rpc, block.number - 1);
+    break;
+  }
+  db.writeBlock(block, extractTransfers(block, logs));
+}
+if (reorgAt !== undefined) {
+  stats.reorgs++;
+  db.rollbackFrom(reorgAt + 1);
+  n = reorgAt + 1;
+  continue;
+}</code></pre>
+
+<div class="highlight">
+  <strong>Analogy:</strong> You have records of blocks 1-5. Blockchain says blocks 3-5 are wrong, the real ones are 3'-5'. Common ancestor = block 2. Delete 3-5, re-ingest 3'-5'.
+</div>
+
+<h4>Q: "Explain <code>writeBlock</code> at <code>src/db.ts:77</code>"</h4>
+<pre><code>writeBlock(block: BlockRow, transfers: Transfer[]) {
+  this.sql.exec('BEGIN');
+  try {
+    this.sql.prepare('DELETE FROM transfers WHERE block_number = ?').run(block.number);
+    this.sql.prepare('INSERT OR REPLACE INTO blocks ...').run(...);
+    for (const t of transfers) {
+      this.sql.prepare('INSERT OR IGNORE INTO transfers ...').run(...);
+      this.sql.prepare('INSERT OR IGNORE INTO addresses ...').run(...);
+    }
+    this.sql.prepare('INSERT INTO cursor ...').run(block.number);
+    this.sql.exec('COMMIT');
+  } catch (e) {
+    this.sql.exec('ROLLBACK');
+    throw e;
+  }
+}</code></pre>
+
+<div class="highlight">
+  <strong>DELETE then INSERT:</strong> Idempotency — same block twice = same result.<br>
+  <strong>Transaction:</strong> Partial failure → ROLLBACK, database stays consistent.
+</div>
+
+<!-- 6.2 System Design -->
+<h3 id="system-design-q">6.2 System Design Questions</h3>
+
+<h4>Q: "Why SQLite over Postgres?"</h4>
+<ul>
+  <li><strong>Zero config</strong> — no service to install, single file</li>
+  <li><strong>ACID</strong> — WAL mode, transaction support</li>
+  <li><strong>Sufficient</strong> — 280k rows, single user</li>
+  <li><strong>Trade-off</strong> — single writer, but fine for this use case</li>
+  <li><strong>If production</strong> — migrate to Postgres for concurrent writes</li>
+</ul>
+
+<h4>Q: "If scaling to mainnet, what changes?"</h4>
+<ol>
+  <li><strong>Storage:</strong> SQLite → Postgres</li>
+  <li><strong>Ingestion:</strong> Parallel workers</li>
+  <li><strong>Caching:</strong> Redis for hot traces</li>
+  <li><strong>API:</strong> Rate limiting, pagination, WebSocket</li>
+  <li><strong>Monitoring:</strong> Metrics, logging, alerting</li>
+  <li><strong>Internal calls:</strong> <code>debug_traceTransaction</code></li>
+  <li><strong>ERC-721/1155:</strong> Additional topic filters</li>
+</ol>
+
+<h4>Q: "What if RPC provider is down?"</h4>
+<ul>
+  <li><code>withRetry</code>: 6 attempts, exponential backoff</li>
+  <li><code>isRangeTooLarge</code>: detect rate limit, halve span</li>
+  <li><code>getCursor</code>: resume from last committed block</li>
+  <li>Worst case: throw error, user can switch <code>SEPOLIA_RPC_URL</code></li>
+  <li>No data loss — idempotent</li>
+</ul>
+
+<h4>Q: "What are the bottlenecks?"</h4>
+<ol>
+  <li><strong>RPC calls</strong> — getBlock per block, getTransferLogs per chunk</li>
+  <li><strong>SQLite writes</strong> — WAL helps, but single writer</li>
+  <li><strong>Trace BFS</strong> — query per address, slow with many edges</li>
+  <li><strong>Contract classification</strong> — eth_getCode per unknown address</li>
+</ol>
+
+<div class="success">
+  <strong>Optimizations done:</strong> Adaptive chunk, parallel getBlock (8), lazy classification, composite indexes.
+</div>
+
+<!-- 6.3 Algorithm -->
+<h3 id="algorithm-q">6.3 Algorithm Questions</h3>
+
+<h4>Q: "Why temporal rule per-hop, not just relative to seed?"</h4>
+<pre><code>Seed: A → B at block 100
+B → C at block 110 (ok)
+C → D at block 105 (BEFORE C received from B!)</code></pre>
+<p>If only checking relative to seed: block 105 > 100, D would be traced. But C didn't have the funds at block 105.</p>
+<p><strong>Per-hop rule:</strong> Each hop must be AFTER that address received funds.</p>
+
+<h4>Q: "How do you handle cycles?"</h4>
+<pre><code>if (!visited.has(other)) {
+  visited.set(other, { hop, pos: posOf(e) });
+  next.add(other);
+}</code></pre>
+<p>Each address visited once. BFS guarantees first visit = shortest. No infinite loops.</p>
+
+<h4>Q: "What's the complexity?"</h4>
+<ul>
+  <li><strong>Time:</strong> O(V + E), bounded by maxNodes × maxEdgesPerNode</li>
+  <li><strong>Space:</strong> O(maxNodes) for visited + frontier</li>
+</ul>
+
+<!-- 6.4 Live Requirement -->
+<h3 id="live-req">6.4 Live Requirement — "Add Internal Call Tracing"</h3>
+
+<div class="warning">
+  Assessment: <em>"add a new requirement live"</em><br>
+  Likely: <strong>"How would you trace internal calls (contract → contract)?"</strong>
+</div>
+
+<h4>Solution</h4>
+<ol>
+  <li><strong>New edge source:</strong>
+    <pre><code>// ingest.ts
+async function getInternalCalls(rpc, block): Promise&lt;Transfer[]&gt; {
+  // debug_traceTransaction for each tx
+  // Parse trace frames for internal value transfers
+}</code></pre>
+  </li>
+  <li><strong>Schema stays the same</strong> — Transfer table already supports from, to, asset, amount</li>
+  <li><strong>Trace algorithm unchanged</strong> — BFS queries edgesFor(), now with more edges</li>
+  <li><strong>Trade-offs:</strong>
+    <ul>
+      <li><code>debug_traceTransaction</code> unavailable on public endpoints</li>
+      <li>Needs archive node (Alchemy/Infura premium)</li>
+      <li>More RPC calls (per tx, not per block)</li>
+      <li>Larger storage</li>
+    </ul>
+  </li>
+</ol>
+
+<!-- 6.5 Behavioral -->
+<h3 id="behavioral-q">6.5 Behavioral Questions</h3>
+
+<h4>Q: "What did you learn from this project?"</h4>
+<ul>
+  <li>Blockchain data extraction needs reorg handling, idempotency</li>
+  <li>Public RPC endpoints have unpredictable rate limits</li>
+  <li>Temporal ordering is critical for "follow the money"</li>
+  <li>Simple data model (SQLite) can be sufficient for specific use cases</li>
+  <li>AI accelerates development, but human must verify and defend</li>
+</ul>
+
+<h4>Q: "How did you divide work with AI?"</h4>
+<ul>
+  <li><strong>Me:</strong> Ingestion, data model, trace algorithm — core logic</li>
+  <li><strong>AI:</strong> API layer, tests, documentation — boilerplate</li>
+  <li><strong>Jointly:</strong> AI drafted, I reviewed and approved</li>
+  <li>Key: I can <strong>explain every line</strong> even if AI wrote it</li>
+</ul>
+
+<h4>Q: "What are the weaknesses?"</h4>
+<ol>
+  <li>No internal call tracing (needs debug_traceTransaction)</li>
+  <li>No ERC-721/1155 support</li>
+  <li>SQLite single writer</li>
+  <li>No caching layer</li>
+  <li>No authentication</li>
+  <li>Window-bounded</li>
+</ol>
+
+<!-- 6.6 Demo -->
+<h3 id="demo">6.6 Demo Script — "Run Your System"</h3>
+
+<pre><code># 1. Show tests pass
+npm test
+
+# 2. Show ingest status
+npm run verify
+
+# 3. Start API
+npm run dev
+
+# 4. Query seed tx
+curl "localhost:3000/trace/tx/0x4c97c1e24c03bd19fcbb9c4eb2fcadf476caf5730e8621cd18183a0b333550d9?depth=3&direction=down"
+
+# 5. Query health
+curl localhost:3000/health
+
+# 6. Query hops
+curl "localhost:3000/hops?from=0x1f759ef4c554c9b6cd72cdbf220e57fa8d63aee1&to=0xf3d27499da2e5c8f5b5eb4c4fa23775e5978844e"</code></pre>
+
+<div class="success">
+  <strong>What to show:</strong> Tests pass → code correct. Verify pass → data matches. API running → queryable. Responses match README → consistent.
+</div>
+
+<!-- 6.7 Cheat Sheet -->
+<h3 id="cheatsheet">6.7 Cheat Sheet — Key Numbers</h3>
+
+<table>
+  <tr><th>Item</th><th>Value</th></tr>
+  <tr><td>Block window</td><td>11672000 – 11673999</td></tr>
+  <tr><td>Total blocks</td><td>2,000</td></tr>
+  <tr><td>Total transfers</td><td>280,051</td></tr>
+  <tr><td>Total addresses</td><td>51,725</td></tr>
+  <tr><td>Tests</td><td>22 (pass 22, fail 0)</td></tr>
+  <tr><td>API routes</td><td>4 (/health, /trace/tx, /trace/address, /hops)</td></tr>
+  <tr><td>Seed queries</td><td>7 (3 tx, 2 address, 2 hops)</td></tr>
+  <tr><td>Ingest time</td><td>~520 seconds (public Tenderly)</td></tr>
+  <tr><td>Runtime dependency</td><td>1 (viem)</td></tr>
+  <tr><td>Chain ID</td><td>11155111 (Sepolia)</td></tr>
+  <tr><td>RPC env var</td><td>SEPOLIA_RPC_URL</td></tr>
+</table>
+
+</body>
+</html>
